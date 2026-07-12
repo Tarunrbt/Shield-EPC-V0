@@ -1,0 +1,100 @@
+name: Multi-Agent Review Pipeline
+
+# STATUS: Template — created 11 Jul 2026, not yet run or verified.
+# This workflow has never been executed in this repository. Do not treat
+# a green checkmark claim anywhere else in this repo as evidence this ran
+# successfully until you've actually triggered it and checked the Actions
+# tab. See docs/AI_AGENT_STANDARDS.md — the Zero Hallucination Policy this
+# repo is built around applies to this workflow's own status too.
+#
+# Pipeline (per SESSION_RESUME.md multi-agent workflow):
+#   Input -> Gemini (preprocessing/normalization) -> Claude (validation/
+#   policy/architecture review) -> ChatGPT (reasoning/orchestration/report
+#   generation) -> Output (Markdown, JSON, Verification, Audit Log)
+#
+# The three pipeline scripts this workflow calls (ai-agents/pipeline/*.py)
+# are stub placeholders as of this commit — they define the expected
+# input/output contract but do not yet call the real provider APIs.
+# Do not remove this comment until the scripts are real and this workflow
+# has been run at least once successfully.
+
+on:
+  workflow_dispatch:
+    inputs:
+      input_document:
+        description: "Path to the document/artifact to review"
+        required: true
+        default: "docs/AI_AGENT_STANDARDS.md"
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - "docs/**"
+      - "ARCHITECTURE.md"
+      - "ROADMAP.md"
+      - "ARCHITECTURE_REVIEW.md"
+
+jobs:
+  multi-agent-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          # ai-agents/pipeline/requirements.txt does not exist yet — add it
+          # alongside the real provider-client implementations.
+          if [ -f ai-agents/pipeline/requirements.txt ]; then
+            pip install -r ai-agents/pipeline/requirements.txt
+          else
+            echo "::warning::ai-agents/pipeline/requirements.txt not found — skipping dependency install. Pipeline scripts are stubs."
+          fi
+
+      - name: Stage 1 — Gemini preprocessing
+        id: gemini
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python ai-agents/pipeline/gemini_preprocess.py --input "${{ github.event.inputs.input_document || 'docs/AI_AGENT_STANDARDS.md' }}" --output stage1_normalized.json
+
+      - name: Stage 2 — Claude validation and architecture review
+        id: claude
+        env:
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+        run: python ai-agents/pipeline/claude_validate.py --input stage1_normalized.json --output stage2_validated.json
+
+      - name: Stage 3 — ChatGPT orchestration and report generation
+        id: chatgpt
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python ai-agents/pipeline/chatgpt_report.py --input stage2_validated.json --output-md Verification_Report.md --output-json Verification_Report.json
+
+      - name: Upload pipeline outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-agent-review-outputs
+          path: |
+            stage1_normalized.json
+            stage2_validated.json
+            Verification_Report.md
+            Verification_Report.json
+          if-no-files-found: warn
+
+  # Human-in-the-loop gate, matching the platform's own architecture:
+  # this pipeline's output is a recommendation for a human reviewer, not
+  # an auto-merge or auto-approval. No step in this workflow approves a PR
+  # or merges anything on its own.
+  human-review-required:
+    needs: multi-agent-review
+    runs-on: ubuntu-latest
+    steps:
+      - name: Note human review requirement
+        run: echo "Pipeline output uploaded as an artifact for human review. This workflow does not auto-approve or auto-merge — see docs/AI_AGENT_STANDARDS.md §2."

@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Shield EPC Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .ai-glow {
+            box-shadow: inset 0 0 12px rgba(124, 131, 155, 0.1);
+            border-left: 3px solid #7c839b;
+        }
+        .shimmer-bg {
+            background: linear-gradient(90deg, #f7f9fb 25%, #eceef0 50%, #f7f9fb 75%);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite linear;
+        }
+        @keyframes shimmer {
+            from { background-position: -200% 0; }
+            to { background-position: 200% 0; }
+        }
+        .pulse-danger {
+            animation: pulse-red 2s infinite;
+        }
+        @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(186, 26, 26, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(186, 26, 26, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(186, 26, 26, 0); }
+        }
+        .stale-pulse {
+            animation: pulse-stale 2.5s infinite;
+        }
+        @keyframes pulse-stale {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-fixed-variant": "#7a3000",
+                    "on-primary": "#ffffff",
+                    "surface": "#f7f9fb",
+                    "on-surface": "#191c1e",
+                    "tertiary-fixed": "#d5e3fd",
+                    "on-secondary-container": "#572000",
+                    "on-background": "#191c1e",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed-dim": "#ffb693",
+                    "inverse-primary": "#bec6e0",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary-container": "#76859b",
+                    "on-primary-container": "#7c839b",
+                    "tertiary-container": "#0d1c2f",
+                    "surface-container": "#eceef0",
+                    "on-tertiary-fixed-variant": "#3a485c",
+                    "secondary-fixed": "#ffdbcc",
+                    "tertiary-fixed-dim": "#b9c7e0",
+                    "surface-dim": "#d8dadc",
+                    "primary": "#000000",
+                    "on-error": "#ffffff",
+                    "surface-variant": "#e0e3e5",
+                    "on-secondary-fixed": "#351000",
+                    "outline-variant": "#c6c6cd",
+                    "on-error-container": "#93000a",
+                    "secondary": "#a04100",
+                    "error": "#ba1a1a",
+                    "primary-container": "#131b2e",
+                    "surface-container-highest": "#e0e3e5",
+                    "outline": "#76777d",
+                    "primary-fixed": "#dae2fd",
+                    "surface-tint": "#565e74",
+                    "surface-container-high": "#e6e8ea",
+                    "on-primary-fixed": "#131b2e",
+                    "primary-fixed-dim": "#bec6e0",
+                    "on-surface-variant": "#45464d",
+                    "on-tertiary": "#ffffff",
+                    "on-tertiary-fixed": "#0d1c2f",
+                    "surface-container-low": "#f2f4f6",
+                    "inverse-on-surface": "#eff1f3",
+                    "on-primary-fixed-variant": "#3f465c",
+                    "secondary-container": "#fe6b00",
+                    "tertiary": "#000000",
+                    "background": "#f7f9fb",
+                    "surface-bright": "#f7f9fb",
+                    "error-container": "#ffdad6",
+                    "inverse-surface": "#2d3133"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "margin-mobile": "16px",
+                    "touch-target-min": "44px",
+                    "gutter": "16px",
+                    "unit": "4px",
+                    "margin-desktop": "32px"
+            },
+            "fontFamily": {
+                    "label-md": ["IBM Plex Sans"],
+                    "mono-data": ["IBM Plex Mono"],
+                    "headline-md": ["IBM Plex Sans"],
+                    "body-md": ["IBM Plex Sans"],
+                    "body-lg": ["IBM Plex Sans"],
+                    "headline-lg": ["IBM Plex Sans"],
+                    "headline-lg-mobile": ["IBM Plex Sans"]
+            },
+            "fontSize": {
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "mono-data": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-lg": ["30px", {"lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-md min-h-screen pb-20">
+<!-- Offline Banner (Sync Status) -->
+<div class="hidden h-8 bg-error-container text-on-error-container flex items-center justify-center font-label-md text-label-md fixed top-0 w-full z-[60]" id="offline-banner">
+<span class="material-symbols-outlined text-[16px] mr-2">cloud_off</span>
+        DEVICE OFFLINE - DATA SYNC PENDING
+    </div>
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface-container-high border-b border-outline-variant dark:border-outline docked full-width top-0 flex justify-between items-center w-full px-margin-mobile h-touch-target-min z-50 sticky">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A close-up professional profile portrait of an industrial supervisor wearing a white hard hat and safety glasses, set against a blurred high-tech manufacturing background. The lighting is crisp and cool-toned, aligning with a professional corporate modern aesthetic. The color palette is dominated by clean whites and slate greys with high-contrast sharp details." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDm5oIQOt7yWVFYCoT_5pkVRXgwWH3GzvGKQpaQJ51dSVBjwb_q97UdjRdAjvT15eJqIfSEO5XlvzU2kfTsYvAFU5kJIzcS93u224fulFVX7cwvea93WisbXYGhPlvdASa7vHxyQWLzeZE13BACGwWE9XQvpvcpcno8_HtrfxoCQYGgffSOwq_MvnBAErBxSi_qSlZkwyNqaLT3dCtxX9fwSTH00b1EcxGdCR39v1WezqNqHOp_hQOZYSxo7Xz205dYS6w2C1Uzrav6"/>
+</div>
+<div class="flex flex-col">
+<span class="text-headline-md font-headline-md font-extrabold text-primary dark:text-inverse-primary leading-none">Shield EPC</span>
+<span class="text-[10px] font-label-md text-on-surface-variant flex items-center">
+<span class="w-2 h-2 rounded-full bg-secondary mr-1"></span> Industrial Site A
+                </span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-primary dark:text-inverse-primary hover:bg-surface-container-low transition-all duration-200 active:scale-95">cloud_sync</button>
+</div>
+</header>
+<main class="p-margin-mobile max-w-7xl mx-auto space-y-6">
+<!-- Multi-tenant Site Selector & Date -->
+<section class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h1 class="text-headline-lg-mobile md:text-headline-lg font-headline-lg">Operational Command</h1>
+<p class="text-on-surface-variant font-body-md">Monitoring real-time safety and compliance across infrastructure.</p>
+</div>
+<div class="flex items-center bg-surface-container-lowest border border-outline-variant rounded-lg p-1 h-11">
+<button class="px-4 py-2 bg-primary text-on-primary rounded-lg font-label-md text-label-md transition-all">Industrial Site A</button>
+<button class="px-4 py-2 text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-low transition-all">Industrial Site B</button>
+</div>
+</section>
+<!-- KPI Summary Grid -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<!-- TRIR Card (human-recorded metric — not AI-generated, no envelope needed) -->
+<div class="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl flex flex-col justify-between h-32 relative overflow-hidden">
+<div class="z-10">
+<span class="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Total Recordable Incident Rate</span>
+<div class="text-[32px] font-bold text-primary mt-1">0.42</div>
+</div>
+<div class="flex items-center text-secondary font-label-md text-label-md z-10">
+<span class="material-symbols-outlined text-[16px] mr-1">trending_down</span>
+                    12% from last quarter
+                </div>
+<div class="absolute -right-4 -bottom-4 opacity-5 text-primary scale-150">
+<span class="material-symbols-outlined text-[80px]">health_and_safety</span>
+</div>
+</div>
+<!-- Active Audits (human-tracked count — not AI-generated, no envelope needed) -->
+<div class="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl flex flex-col justify-between h-32 relative overflow-hidden">
+<div class="z-10">
+<span class="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Active Audits</span>
+<div class="text-[32px] font-bold text-primary mt-1">08</div>
+</div>
+<div class="flex items-center text-on-surface-variant font-label-md text-label-md z-10">
+<span class="material-symbols-outlined text-[16px] mr-1">schedule</span>
+                    3 due in 24 hours
+                </div>
+<div class="absolute -right-4 -bottom-4 opacity-5 text-primary scale-150">
+<span class="material-symbols-outlined text-[80px]">fact_check</span>
+</div>
+</div>
+<!-- FIX #3: Compliance Score — was a bare aggregate percentage presented as a
+     blanket verdict. This directly contradicted the Compliance Agent's charter
+     constraint (never declare "compliant" — only "no gap found against checked
+     clauses as of [date]"). Relabeled to scope the claim, added scope/date line,
+     and made the whole card a link-through to the clause-level breakdown. -->
+<button class="text-left bg-surface-container-lowest border border-outline-variant p-4 rounded-xl flex flex-col justify-between h-32 relative overflow-hidden hover:border-primary transition-colors">
+<div class="z-10">
+<span class="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Checked Clauses Passing</span>
+<div class="text-[32px] font-bold text-primary mt-1">94.8%</div>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 mt-2 overflow-hidden z-10">
+<div class="bg-secondary h-full" style="width: 94.8%"></div>
+</div>
+<div class="flex items-center justify-between z-10 mt-1">
+<span class="text-[10px] font-mono-data text-on-surface-variant">126 of 133 clauses · ISO 45001, BOCW · as of 11 Jul 2026</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">chevron_right</span>
+</div>
+<div class="absolute -right-4 -bottom-4 opacity-5 text-primary scale-150">
+<span class="material-symbols-outlined text-[80px]">verified</span>
+</div>
+</button>
+</section>
+<!-- Main Content Area: Bento Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- AI Pulse: Orchestrator Agent (Span 8) -->
+<section class="lg:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 ai-glow relative overflow-hidden group">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-primary-container" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+<h2 class="text-headline-md font-headline-md">AI Pulse</h2>
+</div>
+<div class="flex items-center gap-2">
+<!-- FIX: staleness indicator, shown/hidden by the same offline logic as the top banner -->
+<span class="hidden items-center gap-1 text-[10px] font-mono-data bg-error-container text-on-error-container px-2 py-1 rounded-full stale-pulse" id="ai-pulse-stale-badge">
+<span class="material-symbols-outlined text-[12px]">history</span>
+                        LAST SYNCED 09:14 — MAY BE STALE
+                    </span>
+<span class="text-label-md font-label-md bg-on-primary-container text-on-primary px-3 py-1 rounded-full uppercase">Real-time Orchestrator</span>
+</div>
+</div>
+<div class="space-y-6">
+<!-- FIX #1 + #2: Hazard card
+     #1: bare "CONFIDENCE: 92%" replaced with an expandable basis — source,
+     retrieval reference, and what's missing — matching the mandatory
+     response envelope (Section 5 of the architecture spec).
+     #2: "Deploy Auditor" (one-tap dispatch) relabeled to "Assign for Review" —
+     a human-confirmed action, not a direct dispatch, per the gate policy
+     table (risk flags require mandatory human sign-off before action). -->
+<!-- FIX (F2, resolved 11 Jul 2026): confirmed intended behavior is NOT direct
+     dispatch. Implements the canonical 5-state flow from Architecture Spec
+     §8.1: AI Observation -> Assign for Review -> Supervisor Approval ->
+     Auditor Assignment -> Field Action. Every transition is human-triggered
+     (except state 1) and appended to a visible, timestamped audit trail so
+     the flow can't silently skip a gate. -->
+<div class="bg-surface-container-low p-4 rounded-lg border-l-4 border-secondary transition-all hover:translate-x-1" id="hazard-card">
+<div class="flex justify-between items-start mb-2">
+<span class="font-bold text-body-md">Potential Hot Work Hazard</span>
+<span class="text-[10px] font-mono-data bg-surface-variant px-2 py-0.5 rounded">HAZARD AGENT · CONFIDENCE 92%</span>
+</div>
+<p class="text-body-md text-on-surface-variant">Unusual temperature spike detected in Zone 4 piping via SCADA telemetry. Predictive model suggests leak potential in Valve B-12. Recommend manual inspection before 14:00 shift change.</p>
+<details class="mt-3 group/details">
+<summary class="text-label-md font-label-md text-on-surface-variant cursor-pointer select-none inline-flex items-center gap-1 hover:text-primary">
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+                                Why is this flagged?
+                            </summary>
+<div class="mt-2 pl-2 border-l-2 border-outline-variant space-y-1.5">
+<div class="text-[11px] font-mono-data text-on-surface-variant">
+<span class="font-bold text-on-surface">Source:</span> SCADA telemetry, Zone 4 / Valve B-12 — reading at 13:02, delta +14°C vs. 24hr baseline
+                                </div>
+<div class="text-[11px] font-mono-data text-on-surface-variant">
+<span class="font-bold text-on-surface">Basis for confidence:</span> pattern match against 3 prior valve-leak incidents with similar thermal signature; no direct visual/manual confirmation yet
+                                </div>
+<div class="text-[11px] font-mono-data text-on-surface-variant">
+<span class="font-bold text-on-surface">Missing information:</span> no manual inspection logged since 11:40; sensor last calibrated 22 days ago
+                                </div>
+</div>
+</details>
+
+<!-- Status badge — always reflects one of the 5 canonical states -->
+<div class="mt-3 flex items-center gap-2">
+<span class="text-[10px] font-label-md uppercase tracking-wider text-on-surface-variant">Status:</span>
+<span class="text-[10px] font-label-md uppercase px-2 py-1 rounded-full bg-surface-variant text-on-surface-variant inline-flex items-center gap-1" id="hazard-status-badge">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                                AI Flagged
+                            </span>
+</div>
+
+<div class="mt-3 flex gap-3 items-center flex-wrap">
+<button class="bg-secondary text-on-secondary px-3 py-1.5 rounded-lg text-label-md font-label-md flex items-center">
+<span class="material-symbols-outlined text-[18px] mr-1">visibility</span>
+                                View Site Map
+                            </button>
+<!-- Single workflow-action button — label/behavior driven by current state,
+     never a direct dispatch action -->
+<button class="bg-primary text-on-primary px-3 py-1.5 rounded-lg text-label-md font-label-md flex items-center disabled:opacity-40 disabled:cursor-not-allowed" id="hazard-action-btn" onclick="advanceHazardWorkflow()">
+<span class="material-symbols-outlined text-[18px] mr-1" id="hazard-action-icon">person_check</span>
+<span id="hazard-action-label">Assign for Review</span>
+</button>
+</div>
+
+<!-- Audit trail — every transition appended here with actor + timestamp.
+     This is a UI-level mirror of what Architecture Spec §7 requires the
+     backend audit ledger to record for real; nothing here is decorative. -->
+<div class="mt-3 pt-3 border-t border-outline-variant">
+<span class="text-[10px] font-label-md uppercase tracking-wider text-on-surface-variant block mb-1.5">Audit Trail</span>
+<ul class="space-y-1" id="hazard-audit-trail">
+<li class="text-[11px] font-mono-data text-on-surface-variant flex gap-2">
+<span class="text-on-surface-variant/60">13:02:07</span>
+<span>Hazard Agent v1.4.2 created observation (confidence 92%)</span>
+</li>
+</ul>
+</div>
+</div>
+<!-- FIX #4: Equipment Integrity / Staff Readiness — were bare claims
+     ("Optimal", "Certified") with no source. Added the same source-tag
+     discipline as everything else, so no AI output gets a free pass just
+     because it's in a summary tile. -->
+<div class="flex gap-4">
+<div class="flex-1 bg-surface-container-low p-4 rounded-lg border border-outline-variant">
+<div class="flex items-center justify-between mb-1">
+<span class="text-label-md font-label-md text-on-tertiary-container">Equipment Integrity</span>
+<span class="text-[9px] font-mono-data text-on-surface-variant">SCADA FEED</span>
+</div>
+<div class="flex items-end gap-2">
+<span class="text-2xl font-bold">Optimal</span>
+<span class="text-label-md text-on-surface-variant mb-1">98.2% Uptime</span>
+</div>
+</div>
+<div class="flex-1 bg-surface-container-low p-4 rounded-lg border border-outline-variant">
+<div class="flex items-center justify-between mb-1">
+<span class="text-label-md font-label-md text-on-tertiary-container">Staff Readiness</span>
+<span class="text-[9px] font-mono-data text-on-surface-variant">TRAINING AGENT</span>
+</div>
+<div class="flex items-end gap-2">
+<span class="text-2xl font-bold">Certified</span>
+<span class="text-label-md text-on-surface-variant mb-1">100% On-Site</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Subtle background mesh/shader effect could go here -->
+<div class="absolute top-0 right-0 p-8 opacity-10">
+<span class="material-symbols-outlined text-[120px]" style="font-variation-settings: 'FILL' 1;">bubble_chart</span>
+</div>
+</section>
+<!-- Quick Actions & Critical Status (Span 4) -->
+<section class="lg:col-span-4 space-y-gutter">
+<!-- Action Buttons -->
+<div class="grid grid-cols-1 gap-3">
+<button class="w-full bg-secondary text-on-secondary h-16 rounded-xl flex items-center justify-between px-6 transition-all hover:opacity-90 active:scale-98">
+<span class="font-headline-md">Report Incident</span>
+<span class="material-symbols-outlined text-[28px]">report_problem</span>
+</button>
+<button class="w-full border-2 border-primary text-primary h-16 rounded-xl flex items-center justify-between px-6 transition-all hover:bg-surface-container-low active:scale-98">
+<span class="font-headline-md">New Audit</span>
+<span class="material-symbols-outlined text-[28px]">fact_check</span>
+</button>
+</div>
+<!-- Site Map Snapshot -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col h-[280px]">
+<div class="p-4 flex items-center justify-between bg-surface-container-lowest border-b border-outline-variant">
+<span class="font-label-md text-label-md uppercase">Site Map - Zone 4 Detail</span>
+<span class="w-2 h-2 rounded-full bg-error pulse-danger"></span>
+</div>
+<div class="flex-1 relative bg-surface-variant">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A detailed digital twin architectural map or 3D floor plan of an industrial facility, showing overhead piping, walkways, and machinery zones. The visual style is blueprint-like with high-contrast lines in slate and white, punctuated by a glowing orange warning marker in a specific sector. The aesthetic is clinical, precise, and professional." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDvFkNcBQJaoi6qIbhmEoOt3pgZEez84Hr5r4jd4SynLjQVJLGQxf_eLvxqunaY0B2b1BRf_c8ylr94Vu1veCsNWyBkpo2KXvWkK-tYv7LNO6RtDVJlc2RvnlSMzGkXqNOzwPEz3tUPmk4rKVKyj8sBh-sa35Gz4wnV6z_s6r-noiHilQsOQFuOMaIzNJRBVWo5DhR-mODHBIOC21PsdOf_UKOgwI-blFouPWljZfzOwew_Cl_r5I1sElkiZec0cMCKfrSCYntRzw7C')"></div>
+<!-- Placeholder coordinates from the original mock asset — swap for real site
+     geo before any client-facing use; left as-is here since it's cosmetic. -->
+<div class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm p-2 rounded border border-outline-variant shadow-sm text-[10px] font-mono-data">
+                            LAT: 53.4808° N<br/>LON: 2.2426° W
+                        </div>
+</div>
+</div>
+</section>
+</div>
+<!-- Safety Critical List -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+<div class="p-4 border-b border-outline-variant flex justify-between items-center">
+<h3 class="text-headline-md font-headline-md">Recent Field Reports</h3>
+<button class="text-label-md font-label-md text-secondary hover:underline">View Historical Data</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="px-6 py-3 font-label-md text-label-md text-on-surface-variant">PRIORITY</th>
+<th class="px-6 py-3 font-label-md text-label-md text-on-surface-variant">IDENTIFIER</th>
+<th class="px-6 py-3 font-label-md text-label-md text-on-surface-variant">FINDING / STATUS</th>
+<th class="px-6 py-3 font-label-md text-label-md text-on-surface-variant">VALIDATION</th>
+<th class="px-6 py-3 font-label-md text-label-md text-on-surface-variant text-right">ACTION</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error pulse-danger"></span>
+<span class="font-label-md text-error">HIGH</span>
+</div>
+</td>
+<td class="px-6 py-4 font-mono-data text-on-surface">#TRX-9021</td>
+<td class="px-6 py-4">
+<div class="font-bold">Missing Guard Rail - Platform B</div>
+<div class="text-sm text-on-surface-variant">Identified during routine walkthrough. Risk of fall.</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-primary text-on-primary px-2 py-1 rounded text-[10px] font-label-md inline-flex items-center">
+<span class="material-symbols-outlined text-[12px] mr-1">check_circle</span>
+                                    SUPERVISOR VERIFIED
+                                </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary">more_vert</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-label-md text-secondary">MED</span>
+</div>
+</td>
+<td class="px-6 py-4 font-mono-data text-on-surface">#AUD-2248</td>
+<td class="px-6 py-4">
+<div class="font-bold">PPE Non-Compliance</div>
+<div class="text-sm text-on-surface-variant">Two contractors observed without eye protection.</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-surface-variant text-on-surface-variant px-2 py-1 rounded text-[10px] font-label-md italic">
+                                    PENDING REVIEW
+                                </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary">more_vert</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 bg-surface dark:bg-inverse-surface px-unit border-t border-outline-variant dark:border-outline">
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-full px-4 py-1 transition-transform active:scale-95" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-label-md font-label-md">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1 hover:text-secondary transition-transform active:scale-95" href="#">
+<span class="material-symbols-outlined">fact_check</span>
+<span class="text-label-md font-label-md">Audits</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1 hover:text-secondary transition-transform active:scale-95" href="#">
+<span class="material-symbols-outlined">report_problem</span>
+<span class="text-label-md font-label-md">Incidents</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1 hover:text-secondary transition-transform active:scale-95" href="#">
+<span class="material-symbols-outlined">smart_toy</span>
+<span class="text-label-md font-label-md">AI Assistant</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1 hover:text-secondary transition-transform active:scale-95" href="#">
+<span class="material-symbols-outlined">more_horiz</span>
+<span class="text-label-md font-label-md">More</span>
+</a>
+</nav>
+<script>
+        // Hazard observation workflow — implements Architecture Spec §8.1
+        // canonical flow. Five states, each transition human-triggered
+        // (except state 0) and logged to the visible audit trail.
+        // NOTE: this is a UI simulation only. In production, step 2
+        // (Supervisor Approval) MUST be enforced at the Auth layer so the
+        // same user who does step 1 (Assign for Review) cannot also
+        // perform step 2 — see ARCHITECTURE_REVIEW.md F2 resolution and
+        // ROADMAP.md Phase 1 exit criteria. This demo does not simulate
+        // role separation; a real implementation requires a second,
+        // distinct authenticated user for the approval step.
+        const hazardWorkflow = {
+            state: 0,
+            steps: [
+                { status: 'AI Flagged', dotClass: 'bg-secondary', action: { icon: 'person_check', label: 'Assign for Review' } },
+                { status: 'Pending Supervisor Review', dotClass: 'bg-secondary', action: { icon: 'gavel', label: 'Approve (Supervisor)' } },
+                { status: 'Supervisor Approved', dotClass: 'bg-primary', action: { icon: 'engineering', label: 'Assign Auditor' } },
+                { status: 'Auditor Assigned', dotClass: 'bg-primary', action: { icon: 'task_alt', label: 'Log Field Action' } },
+                { status: 'Field Action Complete', dotClass: 'bg-secondary', action: null }
+            ],
+            logEntries: [
+                { actor: 'Jane Doe (Site Supervisor)', text: 'assigned observation for supervisor review', role: 'assign_for_review' },
+                { actor: 'R. Mehta (Area Supervisor)', text: 'approved observation after reviewing agent basis and sources', role: 'supervisor_approval' },
+                { actor: 'R. Mehta (Area Supervisor)', text: 'assigned auditor: S. Iyer (Field Auditor, Zone 4)', role: 'auditor_assignment' },
+                { actor: 'S. Iyer (Field Auditor)', text: 'completed field inspection — logged outcome: leak confirmed, valve isolated', role: 'field_action' }
+            ]
+        };
+
+        function advanceHazardWorkflow() {
+            const idx = hazardWorkflow.state;
+            if (idx >= hazardWorkflow.steps.length - 1) return;
+
+            const nextIdx = idx + 1;
+            const nextStep = hazardWorkflow.steps[nextIdx];
+            const logEntry = hazardWorkflow.logEntries[idx];
+
+            // Update status badge
+            const badge = document.getElementById('hazard-status-badge');
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${nextStep.dotClass}"></span>${nextStep.status}`;
+
+            // Append audit trail entry — timestamped, attributed, never silent
+            const trail = document.getElementById('hazard-audit-trail');
+            const li = document.createElement('li');
+            li.className = 'text-[11px] font-mono-data text-on-surface-variant flex gap-2';
+            const now = new Date();
+            const ts = now.toTimeString().split(' ')[0];
+            li.innerHTML = `<span class="text-on-surface-variant/60">${ts}</span><span><span class="font-bold text-on-surface">${logEntry.actor}</span> ${logEntry.text}</span>`;
+            trail.appendChild(li);
+
+            // Update or remove action button
+            const btn = document.getElementById('hazard-action-btn');
+            if (nextStep.action) {
+                document.getElementById('hazard-action-icon').textContent = nextStep.action.icon;
+                document.getElementById('hazard-action-label').textContent = nextStep.action.label;
+            } else {
+                btn.disabled = true;
+                document.getElementById('hazard-action-icon').textContent = 'check_circle';
+                document.getElementById('hazard-action-label').textContent = 'Workflow Complete';
+            }
+
+            hazardWorkflow.state = nextIdx;
+        }
+
+        // Micro-interaction: Simulate Offline State toggle for demonstration
+        let isOnline = true;
+        const banner = document.getElementById('offline-banner');
+        const staleBadge = document.getElementById('ai-pulse-stale-badge');
+
+        // Simulating random network drops for industrial environment realism
+        function toggleSyncStatus() {
+            isOnline = !isOnline;
+            if (!isOnline) {
+                banner.classList.remove('hidden');
+                banner.classList.add('flex');
+                // FIX: when offline, the AI Pulse card depends on live SCADA
+                // telemetry — it must visibly mark itself stale rather than
+                // silently keep showing its last state as if current.
+                staleBadge.classList.remove('hidden');
+                staleBadge.classList.add('flex');
+            } else {
+                banner.classList.add('hidden');
+                banner.classList.remove('flex');
+                staleBadge.classList.add('hidden');
+                staleBadge.classList.remove('flex');
+            }
+        }
+
+        // Simulate interaction with the sync icon
+        document.querySelector('button[class*="cloud_sync"]').addEventListener('click', () => {
+            const icon = event.target;
+            icon.classList.add('animate-spin');
+            setTimeout(() => {
+                icon.classList.remove('animate-spin');
+                toggleSyncStatus();
+            }, 1000);
+        });
+
+        // Simple site switcher simulation
+        const siteButtons = document.querySelectorAll('button.px-4.py-2');
+        siteButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                siteButtons.forEach(b => {
+                    b.classList.remove('bg-primary', 'text-on-primary');
+                    b.classList.add('text-on-surface-variant');
+                });
+                btn.classList.remove('text-on-surface-variant');
+                btn.classList.add('bg-primary', 'text-on-primary');
+            });
+        });
+    </script>
+</body></html>

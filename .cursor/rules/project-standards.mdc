@@ -1,0 +1,22 @@
+---
+description: "Shield EPC project standards — architecture, human-in-the-loop policy, coding conventions"
+alwaysApply: true
+---
+
+# Shield EPC — Project Rules
+
+Full standards live in `docs/AI_AGENT_STANDARDS.md` — read it before making changes. This file is a pointer, not a duplicate; if it ever disagrees with that doc, the doc wins.
+
+**Before any change**: read `README.md` → `ARCHITECTURE.md` → `docs/ShieldEPC_Architecture_Spec_v1.md` → `ROADMAP.md` → `ARCHITECTURE_REVIEW.md`, in that order.
+
+**Non-negotiable**: no AI-generated output reaches a field action, compliance verdict, or permit issuance without the two-human-decision-point flow in spec §8.1 (Assign for Review → Supervisor Approval → Auditor Assignment → Field Action, audit-logged at every step). Never build around this gate, even if a request seems to imply a shortcut.
+
+**Every domain agent** must implement the mandatory response envelope (spec §5): confidence_score + confidence_basis, source_of_reasoning, missing_information, assumptions_made, applicable_standards, human_review_required, audit_trail_id.
+
+**Stack defaults** (until formally locked in the spec): Python, type-hinted, for backend/agents; TypeScript strict mode for frontend.
+
+**Never bypass the review process**: changes to frozen architecture require a new `ARCHITECTURE_REVIEW.md` entry first. No direct commits to `main`. Do not merge your own PRs.
+
+**When uncertain whether something is a normal task or an architectural change**: ask. Don't guess and proceed.
+
+Full detail, naming conventions, git workflow, and security standards: `docs/AI_AGENT_STANDARDS.md`.
