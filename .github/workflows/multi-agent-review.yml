@@ -50,7 +50,12 @@ jobs:
             echo "::error::ai-agents/pipeline/requirements.txt not found! Production pipeline failing early."  
             exit 1
           fi  
-
+- name: Debug Python paths
+  run: |
+    pwd
+    ls -la
+    find . -name "config.py"
+    python -c "import os, sys; print('cwd=', os.getcwd()); print('sys.path=', sys.path)"
       - name: Stage 1 — Gemini preprocessing  
         id: gemini  
         env:  
