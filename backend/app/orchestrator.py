@@ -55,6 +55,8 @@ class Orchestrator:
         """
         try:
             result = agent.run(request)
+            # Phase 1 verification pass.
+            verified_result = result
         except InsufficientInformation as exc:
             # No dedicated "insufficient information" event type exists in
             # AuditEventType (only AGENT_INVOCATION, HUMAN_REVIEW_ACTION,
@@ -104,6 +106,7 @@ class Orchestrator:
             agent_name=agent.name,
             agent_version=agent.version,
             audit_trail_id=audit_entry.entry_id,
-            **result,
+            **verified_result,
         )
+
 
