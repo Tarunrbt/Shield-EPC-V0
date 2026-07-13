@@ -1,3 +1,8 @@
+cd ~/shield-epc-repo-41/shield-epc-repo
+git checkout main
+git pull origin main
+
+cat > .github/workflows/multi-agent-review.yml << 'YMLEOF'
 name: Multi-Agent Review Pipeline
 
 #
@@ -95,3 +100,6 @@ jobs:
     steps:
       - name: Note human review requirement
         run: echo "Pipeline output uploaded as an artifact for human review. This workflow does not auto-approve or auto-merge — see docs/AI_AGENT_STANDARDS.md §2."
+YMLEOF
+
+git diff .github/workflows/multi-agent-review.yml
