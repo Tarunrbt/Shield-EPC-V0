@@ -56,6 +56,7 @@ jobs:
         env:  
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}  
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          PYTHONPATH: ${{ github.workspace }}
         run: python ai-agents/pipeline/gemini_preprocess.py --input "${{ github.event.inputs.input_document || 'docs/AI_AGENT_STANDARDS.md' }}" --output stage1_normalized.json  
 
       - name: Stage 2 — Claude validation and architecture review  
