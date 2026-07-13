@@ -36,55 +36,57 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python  
-        uses: actions/setup-python@v5  
-        with:  
-          python-version: "3.12"  
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      - name: Install dependencies  
-        run: |  
-          pip install --upgrade pip  
-          if [ -f ai-agents/pipeline/requirements.txt ]; then  
-            pip install -r ai-agents/pipeline/requirements.txt  
-          else  
-            echo "::error::ai-agents/pipeline/requirements.txt not found! Production pipeline failing early."  
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          if [ -f ai-agents/pipeline/requirements.txt ]; then
+            pip install -r ai-agents/pipeline/requirements.txt
+          else
+            echo "::error::ai-agents/pipeline/requirements.txt not found! Production pipeline failing early."
             exit 1
-          fi  
-- name: Debug Python paths
-  run: |
-    pwd
-    ls -la
-    find . -name "config.py"
-    python -c "import os, sys; print('cwd=', os.getcwd()); print('sys.path=', sys.path)"
-      - name: Stage 1 — Gemini preprocessing  
-        id: gemini  
-        env:  
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}  
+          fi
+
+      - name: Debug Python paths
+        run: |
+          pwd
+          ls -la
+          find . -name "config.py"
+          python -c "import os, sys; print('cwd=', os.getcwd()); print('sys.path=', sys.path)"
+
+      - name: Stage 1 — Gemini preprocessing
+        id: gemini
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           PYTHONPATH: ${{ github.workspace }}
-        run: python ai-agents/pipeline/gemini_preprocess.py --input "${{ github.event.inputs.input_document || 'docs/AI_AGENT_STANDARDS.md' }}" --output stage1_normalized.json  
+        run: python ai-agents/pipeline/gemini_preprocess.py --input "${{ github.event.inputs.input_document || 'docs/AI_AGENT_STANDARDS.md' }}" --output stage1_normalized.json
 
-      - name: Stage 2 — Claude validation and architecture review  
-        id: claude  
-        env:  
-          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}  
-        run: python ai-agents/pipeline/claude_validate.py --input stage1_normalized.json --output stage2_validated.json  
+      - name: Stage 2 — Claude validation and architecture review
+        id: claude
+        env:
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+        run: python ai-agents/pipeline/claude_validate.py --input stage1_normalized.json --output stage2_validated.json
 
-      - name: Stage 3 — ChatGPT orchestration and report generation  
-        id: chatgpt  
-        env:  
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  
-        run: python ai-agents/pipeline/chatgpt_report.py --input stage2_validated.json --output-md Verification_Report.md --output-json Verification_Report.json  
+      - name: Stage 3 — ChatGPT orchestration and report generation
+        id: chatgpt
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python ai-agents/pipeline/chatgpt_report.py --input stage2_validated.json --output-md Verification_Report.md --output-json Verification_Report.json
 
-      - name: Upload pipeline outputs  
-        uses: actions/upload-artifact@v4  
-        with:  
-          name: multi-agent-review-outputs  
-          path: |  
-            stage1_normalized.json  
-            stage2_validated.json  
-            Verification_Report.md  
-            Verification_Report.json  
+      - name: Upload pipeline outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-agent-review-outputs
+          path: |
+            stage1_normalized.json
+            stage2_validated.json
+            Verification_Report.md
+            Verification_Report.json
           if-no-files-found: warn
 
   human-review-required:
@@ -93,4 +95,3 @@ jobs:
     steps:
       - name: Note human review requirement
         run: echo "Pipeline output uploaded as an artifact for human review. This workflow does not auto-approve or auto-merge — see docs/AI_AGENT_STANDARDS.md §2."
-        
