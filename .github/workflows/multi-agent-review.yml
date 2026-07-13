@@ -1,14 +1,15 @@
 name: Multi-Agent Review Pipeline
 
-STATUS: Active Deployment — Stage 1 Live. Updated 12 Jul 2026.
-
-Pipeline (per SESSION_RESUME.md multi-agent workflow):
-Input -> Gemini (preprocessing/normalization) -> Claude (validation/
-policy/architecture review) -> ChatGPT (reasoning/orchestration/report
-generation) -> Output (Markdown, JSON, Verification, Audit Log)
-
-Note: Stage 1 utilizes the real Gemini API. Stage 2 & 3 currently run 
-as contract-validated scripts preparing for multi-agent expansion.
+#
+#STATUS: Active Deployment — Stage 1 Live. Updated 12 Jul 2026.
+#
+#Pipeline (per SESSION_RESUME.md multi-agent workflow):
+#Input -> Gemini (preprocessing/normalization) -> Claude (validation/
+#policy/architecture review) -> ChatGPT (reasoning/orchestration/report
+#generation) -> Output (Markdown, JSON, Verification, Audit Log)
+#
+#Note: Stage 1 utilizes the real Gemini API. Stage 2 & 3 currently run
+#as contract-validated scripts preparing for multi-agent expansion.
 
 on:
   workflow_dispatch:
