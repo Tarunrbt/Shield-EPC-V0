@@ -102,7 +102,12 @@ class DocumentGeneratorAgent(Agent):
                 "present in the input and substituted directly, with no "
                 "generative inference or clause interpretation performed."
             ),
-            "source_of_reasoning": [],
+            "source_of_reasoning": [
+                {
+                    "type": "structured_input",
+                    "ref": f"caller_supplied_fields:{template_id}",
+                }
+            ],
             "missing_information": [],
             "assumptions_made": [],
             "applicable_standards": [],

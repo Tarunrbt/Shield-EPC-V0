@@ -17,6 +17,7 @@ from app.audit.log import AuditLog
 from app.envelope.middleware import EnvelopeAssembler
 from app.envelope.schema import ResponseEnvelope
 from app.orchestrator import Orchestrator
+from app.agents.verifier import VerifierAgent
 
 
 def check(condition: bool, message: str) -> None:
@@ -36,6 +37,7 @@ def main() -> None:
     orchestrator = Orchestrator(
         audit_log=audit_log,
         envelope_assembler=envelope_assembler,
+        verifier=VerifierAgent(),
     )
 
     agent = DocumentGeneratorAgent()

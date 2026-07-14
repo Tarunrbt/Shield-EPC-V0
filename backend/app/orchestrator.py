@@ -18,7 +18,7 @@ from app.agents.base import Agent, InsufficientInformation
 from app.audit.log import AuditEventType, AuditLog
 from app.envelope.middleware import EnvelopeAssembler
 from app.envelope.schema import ResponseEnvelope
-
+from app.agents.verifier import VerifierAgent
 
 class Orchestrator:
     """
@@ -33,9 +33,15 @@ class Orchestrator:
     immutable audit log entry."
     """
 
-    def __init__(self, audit_log: AuditLog, envelope_assembler: EnvelopeAssembler) -> None:
+    def __init__(
+        self,
+        audit_log: AuditLog,
+        envelope_assembler: EnvelopeAssembler,
+        verifier: VerifierAgent,
+    ) -> None:
         self.audit_log = audit_log
         self.envelope_assembler = envelope_assembler
+        self.verifier = verifier 
 
     def handle(
         self,
@@ -55,8 +61,8 @@ class Orchestrator:
         """
         try:
             result = agent.run(request)
-            # Phase 1 verification pass.
-            verified_result = result
+            # Phase 2 verification pass.
+            verified_result = self.verifier.run(result)
         except InsufficientInformation as exc:
             # No dedicated "insufficient information" event type exists in
             # AuditEventType (only AGENT_INVOCATION, HUMAN_REVIEW_ACTION,
@@ -89,6 +95,12 @@ class Orchestrator:
                 audit_trail_id=audit_entry.entry_id,
             )
 
+        verification_meta = {
+            "verification_status": verified_result.pop("verification_status", None),
+            "verification_agent": verified_result.pop("verification_agent", None),
+            "verification_agent_version": verified_result.pop("verification_agent_version", None),
+        }
+
         audit_entry = self.audit_log.append(
             event_type=AuditEventType.AGENT_INVOCATION,
             tenant_id=tenant_id,
@@ -98,6 +110,7 @@ class Orchestrator:
                 "agent_version": agent.version,
                 "result": result,
                 "outcome": "success",
+                "verification": verification_meta,
             },
         )
 
@@ -108,5 +121,3 @@ class Orchestrator:
             audit_trail_id=audit_entry.entry_id,
             **verified_result,
         )
-
-

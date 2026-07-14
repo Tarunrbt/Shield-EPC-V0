@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 class SourceType(str, Enum):
     STANDARD_CLAUSE = "standard_clause"
     TENANT_DOCUMENT = "tenant_document"
-
+    STRUCTURED_INPUT = "structured_input"
 
 class SourceOfReasoning(BaseModel):
     """One grounding citation. §6 point 1: no claim without a retrieved source."""
