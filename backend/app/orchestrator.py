@@ -20,6 +20,7 @@ from app.envelope.middleware import EnvelopeAssembler
 from app.envelope.schema import ResponseEnvelope
 from app.agents.verifier import VerifierAgent
 
+
 class Orchestrator:
     """
     Wires one agent call to the audit log and envelope assembler.
@@ -38,27 +39,47 @@ class Orchestrator:
         audit_log: AuditLog,
         envelope_assembler: EnvelopeAssembler,
         verifier: VerifierAgent,
+        document_generator_agent: Agent,
+        risk_assessment_agent: Agent,
+        ptw_jsa_agent: Agent,
     ) -> None:
         self.audit_log = audit_log
         self.envelope_assembler = envelope_assembler
-        self.verifier = verifier 
+        self.verifier = verifier
+        self._routing = {
+            "document_generation": document_generator_agent,
+            "risk_assessment": risk_assessment_agent,
+            "ptw_jsa": ptw_jsa_agent,
+        }
 
     def handle(
         self,
         *,
-        agent: Agent,
+        operation_type: str,
         request: dict,
         tenant_id: str,
         user_id: str | None = None,
     ) -> ResponseEnvelope:
         """
-        Runs one agent against a request, logs the outcome (success or
-        InsufficientInformation) to the audit trail, then assembles and
-        returns the envelope. Does not run the Verifier Agent pass --
-        that is a separate Phase 1 component, called before this method
-        once it exists (spec §6 point 2: verification happens before
-        envelope assembly).
+        Routes a request to the appropriate domain agent based on operation_type,
+        logs the outcome (success or InsufficientInformation) to the audit trail,
+        then assembles and returns the envelope.
+
+        operation_type selects which agent will process the request:
+        - "document_generation" → DocumentGeneratorAgent
+        - "risk_assessment" → RiskAssessmentAgent
+        - "ptw_jsa" → PTWJSAAgent
+
+        Verification and envelope assembly happen after agent selection.
         """
+        # Select agent from routing table
+        try:
+            agent = self._routing[operation_type]
+        except KeyError:
+            raise InsufficientInformation(
+                f"Unknown operation_type: {operation_type}"
+            )
+
         try:
             result = agent.run(request)
             # Phase 2 verification pass.

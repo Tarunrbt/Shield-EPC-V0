@@ -2,7 +2,6 @@
 Phase 1 end-to-end wiring test.
 
 Run from backend/ with:
-
     python3 test_e2e.py
 """
 
@@ -13,6 +12,8 @@ import tempfile
 from pathlib import Path
 
 from app.agents.document_generator import DocumentGeneratorAgent
+from app.agents.risk_assessment import RiskAssessmentAgent
+from app.agents.ptw_jsa import PTWJSAAgent
 from app.audit.log import AuditLog
 from app.envelope.middleware import EnvelopeAssembler
 from app.envelope.schema import ResponseEnvelope
@@ -25,6 +26,8 @@ def check(condition: bool, message: str) -> None:
         print(f"FAIL: {message}")
         sys.exit(1)
     print(f"OK:   {message}")
+
+
 def main() -> None:
     temp_dir = Path(tempfile.mkdtemp(prefix="shield_epc_e2e_"))
     audit_log_path = temp_dir / "audit_log.jsonl"
@@ -38,6 +41,9 @@ def main() -> None:
         audit_log=audit_log,
         envelope_assembler=envelope_assembler,
         verifier=VerifierAgent(),
+        document_generator_agent=DocumentGeneratorAgent(),
+        risk_assessment_agent=RiskAssessmentAgent(),
+        ptw_jsa_agent=PTWJSAAgent(),
     )
 
     agent = DocumentGeneratorAgent()
@@ -54,8 +60,9 @@ def main() -> None:
             "date": "2026-07-13",
         },
     }
+
     envelope = orchestrator.handle(
-        agent=agent,
+        operation_type="document_generation",
         request=request,
         tenant_id=tenant_id,
         user_id=user_id,
@@ -85,6 +92,7 @@ def main() -> None:
         bool(envelope.audit_trail_id),
         "audit_trail_id generated",
     )
+
     entries = audit_log.read_all()
 
     check(
@@ -107,4 +115,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
