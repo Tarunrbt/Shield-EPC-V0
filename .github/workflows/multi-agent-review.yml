@@ -44,6 +44,27 @@ jobs:
             echo "::error::requirements.txt not found"
             exit 1
           fi
+      - name: Diagnose google-genai SDK
+        run: |
+          python - <<'PY'
+          import inspect
+          import google.genai
+          from google.genai import types
+
+          print("=== google-genai ===")
+          print(getattr(google.genai, "__version__", "unknown"))
+
+          print("\n=== HttpOptions ===")
+          print(inspect.signature(types.HttpOptions))
+
+          print("\n=== GenerateContentConfig ===")
+          print(inspect.signature(types.GenerateContentConfig))
+          PY
+
+          echo
+          echo "=== Installed packages ==="
+          python -m pip show google-genai
+          python -m pip show httpx
 
       - name: Debug Python paths
         run: |
