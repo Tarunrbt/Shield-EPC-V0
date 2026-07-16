@@ -29,3 +29,9 @@ GROQ_INITIAL_DELAY_SECONDS = float(
 GROQ_MAX_DELAY_SECONDS = float(
     os.environ.get("GROQ_MAX_DELAY_SECONDS", "10")
 )
+GROQ_MAX_TOKENS = int(
+    os.environ.get("GROQ_MAX_TOKENS", "4000")
+)
+GROQ_JSON_MODE = (
+    os.environ.get("GROQ_JSON_MODE", "false").lower() == "true"
+)
