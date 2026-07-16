@@ -19,3 +19,13 @@ GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
 GEMINI_MAX_RETRIES = int(os.environ.get("GEMINI_MAX_RETRIES", "4"))
 GEMINI_RETRY_INITIAL_DELAY_SECONDS = float(os.environ.get("GEMINI_RETRY_INITIAL_DELAY_SECONDS", "2"))
 GEMINI_RETRY_MAX_DELAY_SECONDS = float(os.environ.get("GEMINI_RETRY_MAX_DELAY_SECONDS", "30"))
+
+# Groq configuration
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "mixtral-8x7b-32768")
+GROQ_MAX_RETRIES = int(os.environ.get("GROQ_MAX_RETRIES", "3"))
+GROQ_INITIAL_DELAY_SECONDS = float(
+    os.environ.get("GROQ_INITIAL_DELAY_SECONDS", "2")
+)
+GROQ_MAX_DELAY_SECONDS = float(
+    os.environ.get("GROQ_MAX_DELAY_SECONDS", "10")
+)
