@@ -88,10 +88,6 @@ def main() -> None:
         "agent version preserved",
     )
 
-    test_risk_assessment_and_ptw_jsa_envelope_compatibility(
-        orchestrator, tenant_id, user_id
-    )
-
 
     check(
         bool(envelope.audit_trail_id),
@@ -113,6 +109,11 @@ def main() -> None:
     check(
         entries[0]["payload"]["outcome"] == "success",
         "audit outcome is success",
+    )
+
+
+    test_risk_assessment_and_ptw_jsa_envelope_compatibility(
+        orchestrator, tenant_id, user_id
     )
 
     print("\n✅ Phase 1 end-to-end wiring test PASSED")
