@@ -135,10 +135,34 @@ class Orchestrator:
             },
         )
 
+        _ENVELOPE_ALLOWED_KEYS = {
+            "answer",
+            "confidence_score",
+            "confidence_basis",
+            "source_of_reasoning",
+            "missing_information",
+            "assumptions_made",
+            "applicable_standards",
+            "human_review_required",
+            "human_review_reason",
+        }
+
+        envelope_payload = {
+            k: v for k, v in verified_result.items() if k in _ENVELOPE_ALLOWED_KEYS
+        }
+        dropped = set(verified_result.keys()) - _ENVELOPE_ALLOWED_KEYS
+        if dropped:
+            logger.info(
+                "envelope filter: agent=%s dropped domain-specific keys "
+                "from envelope (retained in audit log payload only): %s",
+                agent.name,
+                sorted(dropped),
+            )
+
         return self.envelope_assembler.assemble(
             tenant_id=tenant_id,
             agent_name=agent.name,
             agent_version=agent.version,
             audit_trail_id=audit_entry.entry_id,
-            **verified_result,
+            **envelope_payload,
         )
