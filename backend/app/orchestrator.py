@@ -20,6 +20,10 @@ from app.envelope.middleware import EnvelopeAssembler
 from app.envelope.schema import ResponseEnvelope
 from app.agents.verifier import VerifierAgent
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class Orchestrator:
     """
