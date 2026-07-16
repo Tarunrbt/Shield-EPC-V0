@@ -24,12 +24,6 @@ from google import genai
 from google.genai import types
 from google.genai.errors import APIError
 
-try:
-    import httpx
-except ImportError:
-    # httpx may not be directly imported if via google.genai; define a fallback
-    httpx = None
-
 from config import (
     GEMINI_MODEL,
     GEMINI_MAX_RETRIES,
@@ -43,11 +37,6 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
-
-# Explicit timeout to prevent indefinite hangs. The 4m 44s failure suggests
-# requests can stall; this hard limit ensures the workflow fails fast and
-# audibly rather than timing out silently.
-GEMINI_REQUEST_TIMEOUT_SECONDS = 300
 
 SYSTEM_INSTRUCTION = (
     "You are a document preprocessing agent. Normalize the given document "
@@ -90,10 +79,6 @@ def build_client(api_key: str) -> "genai.Client":
     Client-level retry uses the SDK's own HttpRetryOptions rather than a
     hand-rolled loop — it retries on the documented transient codes
     (408/429/5xx) and is Google's recommended approach.
-    
-    NOTE: HttpRetryOptions does NOT handle connection-level errors like
-    RemoteProtocolError (server disconnect). Those must be caught at the
-    call site in call_gemini().
     """
     return genai.Client(
         api_key=api_key,
@@ -140,14 +125,12 @@ def validate_output(parsed: dict) -> dict:
 
 def call_gemini(client: "genai.Client", raw_text: str) -> dict:
     """
-    Call Gemini API with structured error handling.
+    Call Gemini API with structured error handling and diagnostics.
     
-    Retries are handled by the client-level HttpRetryOptions for transient
-    HTTP errors (5xx, 429, 408). This function catches additional failure
-    modes:
-    - APIError: all non-retryable HTTP errors and exhausted retries
-    - httpx.RemoteProtocolError: server disconnect before response
-    - Other exceptions: logging for observability
+    Client-level retry (HttpRetryOptions) handles transient HTTP errors.
+    This function separates SDK-specific errors (APIError) from unexpected
+    transport/connection errors, logging each appropriately with timing
+    and payload metadata.
     
     Args:
         client: Initialized Gemini client with retry configuration.
@@ -163,7 +146,7 @@ def call_gemini(client: "genai.Client", raw_text: str) -> dict:
     logger.info(
         f"Calling Gemini API: model={GEMINI_MODEL}, "
         f"payload_size_bytes={payload_size_bytes}, "
-        f"timeout={GEMINI_REQUEST_TIMEOUT_SECONDS}s"
+        f"max_retries={GEMINI_MAX_RETRIES}"
     )
     
     start_time = time.time()
@@ -177,7 +160,6 @@ def call_gemini(client: "genai.Client", raw_text: str) -> dict:
                 response_mime_type="application/json",
                 response_schema=RESPONSE_SCHEMA,
             ),
-            request_options={"timeout": GEMINI_REQUEST_TIMEOUT_SECONDS},
         )
     except APIError as e:
         # Client-level retry already exhausted transient codes by the time
@@ -189,19 +171,13 @@ def call_gemini(client: "genai.Client", raw_text: str) -> dict:
             f"[elapsed={elapsed_seconds:.1f}s, payload_bytes={payload_size_bytes}]"
         )
         sys.exit(1)
-    except Exception as e:
-        # Catch connection-level errors (httpx.RemoteProtocolError, etc.)
-        # that are NOT mapped to APIError by the SDK.
+    except Exception:
+        # Catch connection-level errors (httpx.RemoteProtocolError, timeouts, etc.)
+        # Log with full traceback for debugging.
         elapsed_seconds = time.time() - start_time
-        error_type = type(e).__name__
-        error_msg = str(e)
-        logger.error(
-            f"Gemini API call raised {error_type}: {error_msg} "
+        logger.exception(
+            f"Unexpected error while calling Gemini API "
             f"[elapsed={elapsed_seconds:.1f}s, payload_bytes={payload_size_bytes}]"
-        )
-        logger.info(
-            "Network errors (RemoteProtocolError, ConnectionError) may be "
-            "transient. Consider re-running the workflow."
         )
         sys.exit(1)
 
