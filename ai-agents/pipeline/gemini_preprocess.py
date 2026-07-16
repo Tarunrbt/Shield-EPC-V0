@@ -18,10 +18,17 @@ import json
 import logging
 import os
 import sys
+import time
 
 from google import genai
 from google.genai import types
 from google.genai.errors import APIError
+
+try:
+    import httpx
+except ImportError:
+    # httpx may not be directly imported if via google.genai; define a fallback
+    httpx = None
 
 from config import (
     GEMINI_MODEL,
@@ -36,6 +43,11 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
+
+# Explicit timeout to prevent indefinite hangs. The 4m 44s failure suggests
+# requests can stall; this hard limit ensures the workflow fails fast and
+# audibly rather than timing out silently.
+GEMINI_REQUEST_TIMEOUT_SECONDS = 300
 
 SYSTEM_INSTRUCTION = (
     "You are a document preprocessing agent. Normalize the given document "
@@ -78,6 +90,10 @@ def build_client(api_key: str) -> "genai.Client":
     Client-level retry uses the SDK's own HttpRetryOptions rather than a
     hand-rolled loop — it retries on the documented transient codes
     (408/429/5xx) and is Google's recommended approach.
+    
+    NOTE: HttpRetryOptions does NOT handle connection-level errors like
+    RemoteProtocolError (server disconnect). Those must be caught at the
+    call site in call_gemini().
     """
     return genai.Client(
         api_key=api_key,
@@ -107,6 +123,9 @@ def validate_input(raw_text: str) -> None:
 
 
 def validate_output(parsed: dict) -> dict:
+    """
+    Validate Gemini response against the required schema.
+    """
     missing = REQUIRED_OUTPUT_KEYS - parsed.keys()
     if missing:
         raise ValueError(f"Gemini output is missing schema keys: {missing}")
@@ -120,6 +139,35 @@ def validate_output(parsed: dict) -> dict:
 
 
 def call_gemini(client: "genai.Client", raw_text: str) -> dict:
+    """
+    Call Gemini API with structured error handling.
+    
+    Retries are handled by the client-level HttpRetryOptions for transient
+    HTTP errors (5xx, 429, 408). This function catches additional failure
+    modes:
+    - APIError: all non-retryable HTTP errors and exhausted retries
+    - httpx.RemoteProtocolError: server disconnect before response
+    - Other exceptions: logging for observability
+    
+    Args:
+        client: Initialized Gemini client with retry configuration.
+        raw_text: Preprocessed input document to normalize.
+        
+    Returns:
+        Validated dict with keys: title, summary, sections, key_points.
+        
+    Raises:
+        SystemExit with code 1 on any failure (logs details first).
+    """
+    payload_size_bytes = len(raw_text.encode("utf-8"))
+    logger.info(
+        f"Calling Gemini API: model={GEMINI_MODEL}, "
+        f"payload_size_bytes={payload_size_bytes}, "
+        f"timeout={GEMINI_REQUEST_TIMEOUT_SECONDS}s"
+    )
+    
+    start_time = time.time()
+    
     try:
         response = client.models.generate_content(
             model=GEMINI_MODEL,
@@ -129,24 +177,49 @@ def call_gemini(client: "genai.Client", raw_text: str) -> dict:
                 response_mime_type="application/json",
                 response_schema=RESPONSE_SCHEMA,
             ),
+            request_options={"timeout": GEMINI_REQUEST_TIMEOUT_SECONDS},
         )
     except APIError as e:
         # Client-level retry already exhausted transient codes by the time
         # this is raised. 400/401/403 land here immediately (fatal, not
         # transient) and 429/5xx land here only after retries are spent.
-        logger.error(f"Gemini API call failed (code={e.code}): {e.message}")
+        elapsed_seconds = time.time() - start_time
+        logger.error(
+            f"Gemini API call failed (code={e.code}): {e.message} "
+            f"[elapsed={elapsed_seconds:.1f}s, payload_bytes={payload_size_bytes}]"
+        )
         sys.exit(1)
+    except Exception as e:
+        # Catch connection-level errors (httpx.RemoteProtocolError, etc.)
+        # that are NOT mapped to APIError by the SDK.
+        elapsed_seconds = time.time() - start_time
+        error_type = type(e).__name__
+        error_msg = str(e)
+        logger.error(
+            f"Gemini API call raised {error_type}: {error_msg} "
+            f"[elapsed={elapsed_seconds:.1f}s, payload_bytes={payload_size_bytes}]"
+        )
+        logger.info(
+            "Network errors (RemoteProtocolError, ConnectionError) may be "
+            "transient. Consider re-running the workflow."
+        )
+        sys.exit(1)
+
+    elapsed_seconds = time.time() - start_time
+    logger.info(f"Gemini API call succeeded in {elapsed_seconds:.1f}s")
 
     try:
         parsed = json.loads(response.text)
     except json.JSONDecodeError as e:
         logger.error(f"Gemini response failed JSON parsing: {e}")
+        logger.debug(f"Response text (first 500 chars): {response.text[:500]}")
         sys.exit(1)
 
     try:
         return validate_output(parsed)
     except (ValueError, TypeError) as e:
         logger.error(f"Gemini output failed schema validation: {e}")
+        logger.debug(f"Parsed response: {json.dumps(parsed, indent=2)[:500]}")
         sys.exit(1)
 
 
