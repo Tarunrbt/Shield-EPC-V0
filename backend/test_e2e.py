@@ -88,6 +88,11 @@ def main() -> None:
         "agent version preserved",
     )
 
+    test_risk_assessment_and_ptw_jsa_envelope_compatibility(
+        orchestrator, tenant_id, user_id
+    )
+
+
     check(
         bool(envelope.audit_trail_id),
         "audit_trail_id generated",
@@ -111,6 +116,60 @@ def main() -> None:
     )
 
     print("\n✅ Phase 1 end-to-end wiring test PASSED")
+
+
+def test_risk_assessment_and_ptw_jsa_envelope_compatibility(orchestrator, tenant_id, user_id):
+    """
+    Phase 4.2.1 regression test.
+
+    Confirms the envelope filter patch: RiskAssessmentAgent and PTWJSAAgent
+    both produce domain-specific keys (risk_score, identified_hazards, etc.)
+    that are NOT in EnvelopeAssembler.assemble()'s signature. Before the
+    Phase 4.2.1 patch, this call would raise TypeError. This test exists
+    because test_e2e.py's original coverage only exercised
+    operation_type="document_generation", never these two.
+    """
+    risk_envelope = orchestrator.handle(
+        operation_type="risk_assessment",
+        request={
+            "task_description": "Excavation near buried services",
+            "selected_hazard_ids": ["excavation"],
+            "likelihood": 2,
+            "severity": 3,
+        },
+        tenant_id=tenant_id,
+        user_id=user_id,
+    )
+    check(
+        isinstance(risk_envelope, ResponseEnvelope),
+        "risk_assessment: handle() returns ResponseEnvelope without TypeError",
+    )
+    check(
+        risk_envelope.content.confidence_score == 1.0,
+        "risk_assessment: envelope confidence_score preserved",
+    )
+
+    jsa_envelope = orchestrator.handle(
+        operation_type="ptw_jsa",
+        request={
+            "doc_type": "jsa",
+            "location": "Zone 4",
+            "date": "2026-07-15",
+            "performed_by": "Test User",
+            "task_description": "Excavation near buried services",
+            "selected_hazard_ids": ["excavation", "confined_space"],
+        },
+        tenant_id=tenant_id,
+        user_id=user_id,
+    )
+    check(
+        isinstance(jsa_envelope, ResponseEnvelope),
+        "ptw_jsa: handle() returns ResponseEnvelope without TypeError",
+    )
+    check(
+        "JOB SAFETY ANALYSIS" in jsa_envelope.content.answer,
+        "ptw_jsa: envelope answer contains rendered JSA content",
+    )
 
 
 if __name__ == "__main__":
