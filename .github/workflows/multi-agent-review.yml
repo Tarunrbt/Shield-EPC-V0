@@ -183,3 +183,143 @@ jobs:
         run: |
           echo "Pipeline completed."
           echo "Human review is required before approval or merge."
+
+  notify:
+    needs: [multi-agent-review, human-review-required]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Determine status
+        id: meta
+        run: |
+          if [ "${{ needs.multi-agent-review.result }}" = "success" ]; then
+            echo "status=SUCCESS" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=FAILURE" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: multi-agent-review-outputs
+          path: notify-artifacts
+        continue-on-error: true
+
+      - name: Check attachments
+        id: files
+        run: |
+          FILES=""
+          if [ -f notify-artifacts/Verification_Report.md ]; then
+            FILES="notify-artifacts/Verification_Report.md"
+          fi
+          if [ -f notify-artifacts/Verification_Report.json ]; then
+            if [ -n "$FILES" ]; then
+              FILES="$FILES,notify-artifacts/Verification_Report.json"
+            else
+              FILES="notify-artifacts/Verification_Report.json"
+            fi
+          fi
+          echo "attachments=$FILES" >> "$GITHUB_OUTPUT"
+
+      - name: Send email (attachments, primary from)
+        id: email_att_primary
+        if: ${{ vars.NOTIFY_EMAIL == 'true' && steps.files.outputs.attachments != '' }}
+        continue-on-error: true
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          to: ${{ secrets.MAIL_TO }}
+          from: Shield EPC CI <${{ secrets.MAIL_USERNAME }}>
+          subject: "[${{ steps.meta.outputs.status }}] ${{ github.repository }} run #${{ github.run_number }}"
+          body: |
+            Status: ${{ steps.meta.outputs.status }}
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Run Number: ${{ github.run_number }}
+            Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          attachments: ${{ steps.files.outputs.attachments }}
+
+      - name: Send email (attachments, fallback from)
+        if: ${{ vars.NOTIFY_EMAIL == 'true' && steps.files.outputs.attachments != '' && steps.email_att_primary.outcome == 'failure' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          to: ${{ secrets.MAIL_TO }}
+          from: ${{ secrets.MAIL_USERNAME }}
+          subject: "[${{ steps.meta.outputs.status }}] ${{ github.repository }} run #${{ github.run_number }}"
+          body: |
+            Status: ${{ steps.meta.outputs.status }}
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Run Number: ${{ github.run_number }}
+            Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          attachments: ${{ steps.files.outputs.attachments }}
+
+      - name: Send email (no attachments, primary from)
+        id: email_noatt_primary
+        if: ${{ vars.NOTIFY_EMAIL == 'true' && steps.files.outputs.attachments == '' }}
+        continue-on-error: true
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          to: ${{ secrets.MAIL_TO }}
+          from: Shield EPC CI <${{ secrets.MAIL_USERNAME }}>
+          subject: "[${{ steps.meta.outputs.status }}] ${{ github.repository }} run #${{ github.run_number }}"
+          body: |
+            Status: ${{ steps.meta.outputs.status }}
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Run Number: ${{ github.run_number }}
+            Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Note: No report files were found to attach.
+
+      - name: Send email (no attachments, fallback from)
+        if: ${{ vars.NOTIFY_EMAIL == 'true' && steps.files.outputs.attachments == '' && steps.email_noatt_primary.outcome == 'failure' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          to: ${{ secrets.MAIL_TO }}
+          from: ${{ secrets.MAIL_USERNAME }}
+          subject: "[${{ steps.meta.outputs.status }}] ${{ github.repository }} run #${{ github.run_number }}"
+          body: |
+            Status: ${{ steps.meta.outputs.status }}
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Run Number: ${{ github.run_number }}
+            Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Note: No report files were found to attach.
+
+      - name: Send Slack notification
+        if: ${{ vars.NOTIFY_SLACK == 'true' }}
+        run: |
+          curl -sS -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"[${{ steps.meta.outputs.status }}] ${{ github.repository }} run #${{ github.run_number }} on ${{ github.ref_name }} (${{ github.sha }})\nRun: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "${{ secrets.SLACK_WEBHOOK_URL }}"
+
+      - name: Send Telegram notification
+        if: ${{ vars.NOTIFY_TELEGRAM == 'true' }}
+        run: |
+          MSG="[${{ steps.meta.outputs.status }}] ${{ github.repository }} run #${{ github.run_number }} on ${{ github.ref_name }} (${{ github.sha }})
+Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -sS -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            --data-urlencode "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            --data-urlencode "text=$MSG"
