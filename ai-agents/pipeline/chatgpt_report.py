@@ -1,13 +1,13 @@
 """
-ChatGPT orchestration / report generation stage.
+Stage 3 report generation.
 
-Calls the OpenAI API to synthesize Stage 2 (Claude) validation output into
-a final report: summary and recommendations, per this repo's canonical
-standards (docs/AI_AGENT_STANDARDS.md).
+Synthesizes Stage 2 validation output into a final report: summary and
+recommendations, per this repo's canonical standards
+(docs/AI_AGENT_STANDARDS.md).
 
-Reads OPENAI_API_KEY from the environment (set by the workflow from
-GitHub Secrets / Termux environment) — same pattern as GEMINI_API_KEY and
-CLAUDE_API_KEY.
+Provider-agnostic: REPORT_PROVIDER selects between Groq and OpenAI, both
+accessed via the OpenAI-compatible chat completions API. No model IDs are
+hardcoded — all model selection comes from GitHub Variables.
 """
 
 import argparse
@@ -18,11 +18,9 @@ from datetime import datetime, timezone
 
 from openai import OpenAI
 
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
-
 SYSTEM_PROMPT = (
-    "You are Stage 3 (ChatGPT) in an HSE automation pipeline. "
-    "You receive Stage 2 (Claude) validation output and must produce a "
+    "You are Stage 3 in an HSE automation pipeline. "
+    "You receive Stage 2 validation output and must produce a "
     "short summary and a list of concrete recommendations, consistent "
     "with this repo's canonical standards (docs/AI_AGENT_STANDARDS.md). "
     'Respond with ONLY a JSON object: {"summary": "short overall summary", '
@@ -31,15 +29,45 @@ SYSTEM_PROMPT = (
 
 
 def main():
-    parser = argparse.ArgumentParser(description="ChatGPT report generation stage")
-    parser.add_argument("--input", required=True, help="Path to stage 2 (Claude) output JSON")
+    parser = argparse.ArgumentParser(description="Stage 3 report generation")
+    parser.add_argument("--input", required=True, help="Path to Stage 2 output JSON")
     parser.add_argument("--output-md", required=True, help="Path to write Markdown report")
     parser.add_argument("--output-json", required=True, help="Path to write JSON report")
     args = parser.parse_args()
 
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        print("::error::OPENAI_API_KEY not set in environment.", file=sys.stderr)
+    # --- Provider selection (validated here, after argparse, not at import time) ---
+    report_provider = os.environ.get("REPORT_PROVIDER", "").strip().lower()
+
+    if report_provider == "groq":
+        api_key = os.environ.get("GROQ_API_KEY")
+        if not api_key:
+            print("::error::GROQ_API_KEY not set in environment.", file=sys.stderr)
+            sys.exit(1)
+        report_model = os.environ.get("GROQ_REPORT_MODEL")
+        if not report_model:
+            print("::error::GROQ_REPORT_MODEL not set in environment.", file=sys.stderr)
+            sys.exit(1)
+        client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
+        supports_json_mode = True  # Groq's OpenAI-compatible endpoint supports response_format
+
+    elif report_provider == "openai":
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            print("::error::OPENAI_API_KEY not set in environment.", file=sys.stderr)
+            sys.exit(1)
+        report_model = os.environ.get("OPENAI_MODEL")
+        if not report_model:
+            print("::error::OPENAI_MODEL not set in environment.", file=sys.stderr)
+            sys.exit(1)
+        client = OpenAI(api_key=api_key)
+        supports_json_mode = True
+
+    else:
+        print(
+            "::error::REPORT_PROVIDER must be 'groq' or 'openai' "
+            f"(got: '{report_provider or '<unset>'}').",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     if not os.path.exists(args.input):
@@ -49,10 +77,8 @@ def main():
     with open(args.input, "r", encoding="utf-8") as f:
         stage2 = json.load(f)
 
-    client = OpenAI(api_key=api_key)
-
-    response = client.chat.completions.create(
-        model=OPENAI_MODEL,
+    completion_kwargs = dict(
+        model=report_model,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {
@@ -62,6 +88,10 @@ def main():
         ],
         max_tokens=768,
     )
+    if supports_json_mode:
+        completion_kwargs["response_format"] = {"type": "json_object"}
+
+    response = client.chat.completions.create(**completion_kwargs)
 
     raw = (response.choices[0].message.content or "").strip()
     if raw.startswith("```"):
@@ -70,17 +100,17 @@ def main():
             raw = raw[4:].strip()
 
     try:
-        chatgpt_output = json.loads(raw)
+        report_output = json.loads(raw)
     except json.JSONDecodeError:
-        print(f"::error::ChatGPT did not return valid JSON: {raw}", file=sys.stderr)
+        print(f"::error::{report_provider} did not return valid JSON: {raw}", file=sys.stderr)
         sys.exit(1)
 
     timestamp = datetime.now(timezone.utc).isoformat()
-    summary = chatgpt_output.get("summary", "")
-    recommendations = chatgpt_output.get("recommendations", [])
+    summary = report_output.get("summary", "")
+    recommendations = report_output.get("recommendations", [])
 
     report_json = {
-        "stage": "chatgpt_report",
+        "stage": "stage3_report",
         "status": "ok",
         "generated_at": timestamp,
         "input_from": stage2.get("stage"),
@@ -92,6 +122,7 @@ def main():
         json.dump(report_json, f, indent=2)
 
     checks = stage2.get("checks", {})
+    validation_provider = os.environ.get("VALIDATION_PROVIDER", "unknown").strip().lower() or "unknown"
 
     md_lines = [
         "# Verification Report",
@@ -102,8 +133,8 @@ def main():
         "",
         "| Stage | Result |",
         "|---|---|",
-        f"| Stage 2 — Claude validation | {stage2.get('status', 'unknown')} |",
-        "| Stage 3 — ChatGPT report | ok |",
+        f"| Stage 2 — {validation_provider.capitalize()} validation | {stage2.get('status', 'unknown')} |",
+        f"| Stage 3 — {report_provider.capitalize()} report | ok |",
         "",
         "## Stage 2 Validation Checks",
         "",
@@ -129,7 +160,7 @@ def main():
     with open(args.output_md, "w", encoding="utf-8") as f:
         f.write(md_content)
 
-    print(f"[STAGE3] Wrote {args.output_md} and {args.output_json} — status: ok")
+    print(f"[STAGE3] Wrote {args.output_md} and {args.output_json} — status: ok (provider: {report_provider})")
 
 
 if __name__ == "__main__":
