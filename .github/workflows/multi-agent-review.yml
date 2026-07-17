@@ -176,6 +176,7 @@ jobs:
 
   human-review-required:
     needs: multi-agent-review
+    if: always()
     runs-on: ubuntu-latest
 
     steps:
