@@ -52,6 +52,10 @@ jobs:
           find . -name "config.py"
           python -c "import os,sys; print('cwd=', os.getcwd()); print('sys.path=', sys.path)"
 
+      # ----------------------------
+      # Stage 1 - Preprocessing
+      # ----------------------------
+
       - name: Stage 1 - Gemini preprocessing
         if: ${{ vars.PREPROCESS_PROVIDER == 'gemini' || vars.PREPROCESS_PROVIDER == '' }}
         env:
@@ -73,6 +77,10 @@ jobs:
           python ai-agents/pipeline/groq_preprocess.py \
             --input "${{ github.event.inputs.input_document || 'docs/AI_AGENT_STANDARDS.md' }}" \
             --output stage1_normalized.json
+
+      # ----------------------------
+      # Stage 2 - Validation
+      # ----------------------------
 
       - name: Stage 2 - Claude validation
         if: ${{ vars.VALIDATION_PROVIDER == 'claude' }}
@@ -101,14 +109,38 @@ jobs:
             --input stage1_normalized.json \
             --output stage2_validated.json
 
-      - name: Stage 3 - ChatGPT report generation
+      # ----------------------------
+      # Verify Stage 2 Output
+      # ----------------------------
+
+      - name: Verify Stage 2 output
+        run: |
+          if [ ! -f stage2_validated.json ]; then
+            echo "::error::stage2_validated.json missing. Check VALIDATION_PROVIDER."
+            exit 1
+          fi
+
+      # ----------------------------
+      # Stage 3 - Report Generation
+      # ----------------------------
+
+      - name: Stage 3 - Report generation
         env:
+          REPORT_PROVIDER: ${{ vars.REPORT_PROVIDER }}
+          VALIDATION_PROVIDER: ${{ vars.VALIDATION_PROVIDER }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_REPORT_MODEL: ${{ vars.GROQ_REPORT_MODEL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
         run: |
           python ai-agents/pipeline/chatgpt_report.py \
             --input stage2_validated.json \
             --output-md Verification_Report.md \
             --output-json Verification_Report.json
+
+      # ----------------------------
+      # Upload Artifacts
+      # ----------------------------
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
