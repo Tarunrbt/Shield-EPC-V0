@@ -320,7 +320,7 @@ jobs:
         if: ${{ vars.NOTIFY_TELEGRAM == 'true' }}
         run: |
           MSG="[${{ steps.meta.outputs.status }}] ${{ github.repository }} run #${{ github.run_number }} on ${{ github.ref_name }} (${{ github.sha }})
-Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           curl -sS -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             --data-urlencode "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             --data-urlencode "text=$MSG"
