@@ -2,3 +2,4 @@
 __pycache__/
 *.log
 backend/update_notion.py
+backend/.env
