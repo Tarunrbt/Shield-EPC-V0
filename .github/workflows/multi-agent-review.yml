@@ -309,6 +309,7 @@ jobs:
             Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
             Note: No report files were found to attach.
 
+      
       - name: Send Slack notification
         if: ${{ vars.NOTIFY_SLACK == 'true' }}
         run: |
