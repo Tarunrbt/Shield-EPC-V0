@@ -80,8 +80,33 @@ class Orchestrator:
         try:
             agent = self._routing[operation_type]
         except KeyError:
-            raise InsufficientInformation(
+            exc = InsufficientInformation(
                 f"Unknown operation_type: {operation_type}"
+            )
+            audit_entry = self.audit_log.append(
+                event_type=AuditEventType.AGENT_INVOCATION,
+                tenant_id=tenant_id,
+                user_id=user_id,
+                payload={
+                    "agent": None,
+                    "agent_version": None,
+                    "request": request,
+                    "outcome": "insufficient_information",
+                    "reason": str(exc),
+                },
+            )
+            return self.envelope_assembler.assemble(
+                tenant_id=tenant_id,
+                agent_name="orchestrator",
+                agent_version="n/a",
+                answer="",
+                confidence_score=0.0,
+                confidence_basis="insufficient_information: no fabricated answer produced",
+                source_of_reasoning=[],
+                missing_information=[str(exc)],
+                human_review_required=True,
+                human_review_reason="low_confidence",
+                audit_trail_id=audit_entry.entry_id,
             )
 
         try:
@@ -119,7 +144,7 @@ class Orchestrator:
                 human_review_reason="low_confidence",
                 audit_trail_id=audit_entry.entry_id,
             )
-except Exception as exc:
+        except Exception as exc:
             # System/agent-execution failures (API errors, timeouts, bugs)
             # are NOT InsufficientInformation: they mean the pipeline itself
             # broke, not that the agent lacked grounding data. The audit
@@ -146,6 +171,7 @@ except Exception as exc:
                 operation_type,
             )
             raise
+
         verification_meta = {
             "verification_status": verified_result.pop("verification_status", None),
             "verification_agent": verified_result.pop("verification_agent", None),
