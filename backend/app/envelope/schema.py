@@ -12,8 +12,7 @@ is a bug in the code or a stale document").
 from enum import Enum
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
-
+from pydantic import BaseModel, ConfigDict, Field
 
 class SourceType(str, Enum):
     STANDARD_CLAUSE = "standard_clause"
@@ -64,8 +63,9 @@ class ResponseEnvelope(BaseModel):
     audit_trail_id: str
     schema_version: Literal["1.0"] = "1.0"
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(
+    use_enum_values=True,
+)
 
     def model_post_init(self, __context: Any) -> None:
         if self.human_review_required and self.human_review_reason is None:
