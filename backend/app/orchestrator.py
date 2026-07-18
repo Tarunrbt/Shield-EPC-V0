@@ -171,6 +171,9 @@ class Orchestrator:
                 operation_type,
             )
             raise
+            
+            verified_result = dict(verified_result)  # defensive copy: avoid mutating
+                                                   # the verifier's returned object
 
         verification_meta = {
             "verification_status": verified_result.pop("verification_status", None),
