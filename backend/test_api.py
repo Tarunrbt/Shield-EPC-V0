@@ -33,7 +33,12 @@ def test_root() -> None:
     check(response.json() == {"status": "ok"}, "GET / body is correct")
 
 
-def test_generate() -> dict:
+def _generate_document(client) -> dict:
+    """
+    POSTs to /generate and runs all response checks. Shared by the
+    pytest test_generate() and by main()'s standalone script path,
+    which needs the envelope dict to pass into test_audit_log_entry().
+    """
     payload = {
         "template_id": "jsa_draft",
         "fields": {
@@ -63,6 +68,10 @@ def test_generate() -> dict:
     return body
 
 
+def test_generate() -> None:
+    _generate_document(client)
+
+
 def test_audit_log_entry(envelope: dict) -> None:
     entries = audit_log.read_all()
     check(len(entries) == 1, "exactly one audit log entry exists")
@@ -83,7 +92,7 @@ def test_audit_log_entry(envelope: dict) -> None:
 def main() -> None:
     test_health()
     test_root()
-    envelope = test_generate()
+    envelope = _generate_document(client)
     test_audit_log_entry(envelope)
     print("\n✅ Phase 2 API integration tests PASSED")
 
