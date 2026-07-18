@@ -119,7 +119,33 @@ class Orchestrator:
                 human_review_reason="low_confidence",
                 audit_trail_id=audit_entry.entry_id,
             )
-
+except Exception as exc:
+            # System/agent-execution failures (API errors, timeouts, bugs)
+            # are NOT InsufficientInformation: they mean the pipeline itself
+            # broke, not that the agent lacked grounding data. The audit
+            # log's hash-chained, immutable design requires every invocation
+            # attempt -- including failed ones -- to leave a record. Letting
+            # this propagate unlogged meant a crash left zero audit trail of
+            # the attempt ever happening.
+            self.audit_log.append(
+                event_type=AuditEventType.AGENT_INVOCATION,
+                tenant_id=tenant_id,
+                user_id=user_id,
+                payload={
+                    "agent": agent.name,
+                    "agent_version": agent.version,
+                    "request": request,
+                    "outcome": "error",
+                    "error_type": type(exc).__name__,
+                    "reason": str(exc),
+                },
+            )
+            logger.exception(
+                "agent execution failed: agent=%s operation_type=%s",
+                agent.name,
+                operation_type,
+            )
+            raise
         verification_meta = {
             "verification_status": verified_result.pop("verification_status", None),
             "verification_agent": verified_result.pop("verification_agent", None),
