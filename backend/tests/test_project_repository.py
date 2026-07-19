@@ -128,3 +128,58 @@ def test_foreign_key_violation_rejected(repo, db_path, tenant_id):
     project = _make_project("proj_001", tenant_id)
     with pytest.raises(sqlite3.IntegrityError):
         repo.save(tenant_id, project)
+
+
+def test_cross_tenant_project_id_collision_does_not_transfer_ownership(
+    repo, db_path, tenant_id
+):
+    """
+    Verification target for docs/ADR_INDEX.md's 'potential untested edge
+    case' row. Tenant A saves a project with project_id=X. Tenant B then
+    attempts to save a DIFFERENT project also with project_id=X.
+
+    This test does not assume the outcome -- it asserts what SHOULD be
+    true for correctness (no cross-tenant ownership transfer, no data
+    corruption, no silent success that misleads the caller) and will
+    fail loudly if actual behavior differs from that expectation.
+    """
+    other_tenant_id = "tenant_test_003"
+    now = datetime.now(timezone.utc).isoformat()
+
+    TenantRepository(db_path).save(
+        tenant_id, Tenant(tenant_id, "Acme EPC", "active", now)
+    )
+    TenantRepository(db_path).save(
+        other_tenant_id, Tenant(other_tenant_id, "Other Co", "active", now)
+    )
+
+    original = _make_project("shared_id", tenant_id, name="Tenant A Project")
+    repo.save(tenant_id, original)
+
+    colliding = _make_project(
+        "shared_id", other_tenant_id, name="Tenant B Project"
+    )
+    # Should not raise -- tenant_id argument matches entity.tenant_id here,
+    # so the Python-level ValueError check does not apply. What happens at
+    # the SQL level is exactly what this test exists to confirm.
+    repo.save(other_tenant_id, colliding)
+
+    # Invariant 1: Tenant A's original project must be unaffected --
+    # neither deleted nor overwritten with Tenant B's data.
+    fetched_a = repo.get_by_id(tenant_id, "shared_id")
+    assert fetched_a is not None, (
+        "Tenant A's project disappeared after a cross-tenant collision "
+        "-- ownership was silently transferred or the row was lost."
+    )
+    assert fetched_a.name == "Tenant A Project", (
+        "Tenant A's project was overwritten by Tenant B's save() call "
+        "-- this would be a cross-tenant data corruption bug."
+    )
+
+    # Invariant 2: Tenant B must not gain visibility into a project it
+    # does not actually own.
+    fetched_b = repo.get_by_id(other_tenant_id, "shared_id")
+    assert fetched_b is None, (
+        "Tenant B can see a project_id it collided into but does not "
+        "own -- cross-tenant isolation is broken."
+    )
