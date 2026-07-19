@@ -52,8 +52,36 @@ def connection_scope(db_path: str | Path = DB_PATH) -> Iterator[sqlite3.Connecti
 
 def init_schema(db_path: str | Path = DB_PATH) -> None:
     """
-    Placeholder for schema creation. Persistence Phase 2 adds the actual
-    CREATE TABLE statements here (tenant, project, etc.). Intentionally
-    empty in Phase 1 -- infra only, no entities defined yet.
+    Creates the operational schema if it does not already exist.
+    Idempotent -- safe to call on every app startup.
+
+    Deliberately does NOT create any audit-related tables here -- the
+    audit ledger (app/audit/log.py) is a separate store per
+    docs/ShieldEPC_Architecture_Spec_v1.md S7.
     """
-    pass
+    with connection_scope(db_path) as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS tenant (
+                tenant_id  TEXT PRIMARY KEY,
+                name       TEXT NOT NULL,
+                status     TEXT NOT NULL DEFAULT 'active',
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS project (
+                project_id TEXT PRIMARY KEY,
+                tenant_id  TEXT NOT NULL,
+                name       TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (tenant_id) REFERENCES tenant (tenant_id)
+            )
+            """
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_project_tenant_id "
+            "ON project (tenant_id)"
+        )
