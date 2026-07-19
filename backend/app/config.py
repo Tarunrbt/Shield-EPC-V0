@@ -15,3 +15,11 @@ from pathlib import Path
 AUDIT_LOG_PATH: Path = Path(
     os.environ.get("AUDIT_LOG_PATH", "data/audit_log.jsonl")
 )
+
+# Path to the SQLite operational database (tenant/project/session data).
+# Deliberately separate from AUDIT_LOG_PATH -- see app/audit/log.py and
+# docs/ShieldEPC_Architecture_Spec_v1.md §7 (audit log must be a separate
+# store from the operational DB).
+DB_PATH: Path = Path(
+    os.environ.get("DB_PATH", "data/shield_epc.db")
+)
