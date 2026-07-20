@@ -7,12 +7,15 @@ Tenant-specific semantics (tenant_id == entity_id enforcement).
 """
 
 from datetime import datetime, timezone
+import sqlite3
 
 import pytest
 
 from app.db.database import init_schema
 from app.db.models import Tenant
+from app.db.models import Project
 from app.db.repositories.tenant_repository import TenantRepository
+from app.db.repositories.project_repository import ProjectRepository
 
 
 @pytest.fixture
@@ -97,3 +100,27 @@ def test_save_rejects_mismatched_tenant_id(repo, tenant_id):
     tenant = _make_tenant(tenant_id)
     with pytest.raises(ValueError):
         repo.save("different_tenant", tenant)
+
+
+
+
+def test_delete_tenant_with_existing_project_raises_integrity_error(
+    repo, db_path, tenant_id
+):
+    tenant = _make_tenant(tenant_id)
+    repo.save(tenant_id, tenant)
+
+    project_repo = ProjectRepository(db_path)
+    project = Project(
+        project_id="proj_1",
+        tenant_id=tenant_id,
+        name="Test Project",
+        created_at=datetime.now(timezone.utc).isoformat(),
+    )
+    project_repo.save(tenant_id, project)
+
+    with pytest.raises(sqlite3.IntegrityError):
+        repo.delete(tenant_id, tenant_id)
+
+    # tenant row must remain untouched since the delete was rejected
+    assert repo.get_by_id(tenant_id, tenant_id) is not None
