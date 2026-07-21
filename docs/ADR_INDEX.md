@@ -5,15 +5,16 @@ status of each architectural decision, so any reviewer (human or AI) can
 immediately see what's proposal, what's verified against source, and what's
 policy.
 
-This document is split into two parts, added in separate commits:
+This document is split into two files:
 
 1. **This file — the governance framework.** Status model, evidence model,
    promotion rules, review policy. No claims about the current state of the
    codebase live here — this part should stay stable even as the codebase
    changes.
-2. **The Current Register** (added in a follow-up commit) — the actual table
-   of architectural decisions and their status. This is a living document;
-   every row is an independently reviewable claim with its own evidence.
+2. **[docs/ADR_REGISTER.md](./ADR_REGISTER.md) — the Current Register** — the
+   actual table of architectural decisions and their status. This is a living
+   document; every row is an independently reviewable claim with its own
+   evidence.
 
 Keeping these separate means a reviewer's confidence in the governance rules
 does not depend on the register being current.
