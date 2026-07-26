@@ -92,6 +92,11 @@ jobs:
 
       - name: Stage 3 - ChatGPT report generation
         env:
+          REPORT_PROVIDER: ${{ vars.REPORT_PROVIDER }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_REPORT_MODEL: ${{ vars.GROQ_REPORT_MODEL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           python ai-agents/pipeline/chatgpt_report.py \
