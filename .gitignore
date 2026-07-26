@@ -3,3 +3,9 @@ __pycache__/
 *.log
 backend/update_notion.py
 backend/.env
+
+# Local pipeline outputs (regenerated each run, not source)
+stage1_normalized.json
+stage2_validated.json
+Verification_Report.json
+Verification_Report.md
