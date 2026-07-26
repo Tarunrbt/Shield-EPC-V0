@@ -97,7 +97,6 @@ jobs:
           GROQ_REPORT_MODEL: ${{ vars.GROQ_REPORT_MODEL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           python ai-agents/pipeline/chatgpt_report.py \
             --input stage2_validated.json \
