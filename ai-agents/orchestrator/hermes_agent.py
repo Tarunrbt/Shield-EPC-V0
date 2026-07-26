@@ -1,34 +1,16 @@
 """
-Hermes Orchestrator — Phase 1 (local CLI only).
+Hermes Orchestrator — Phase 2 (local CLI, provider/router abstraction).
 
-Coordinates the existing pipeline scripts (gemini_preprocess.py,
-{claude,groq,deepseek}_validate.py, chatgpt_report.py) as subprocesses,
-in the same order and with the same file contract as
-.github/workflows/multi-agent-review.yml.
-
-This is a coordination layer only — it does not call any AI provider
-directly and does not duplicate provider logic. All actual inference
-happens in the existing pipeline scripts.
+Coordinates the existing pipeline scripts as subprocesses, using
+router.py to resolve which script/provider to run and providers.py as
+the source of truth for provider metadata. Hermes itself still does
+not call any AI provider directly — see docs/HERMES.md.
 
 Usage:
     python3 ai-agents/orchestrator/hermes_agent.py --input docs/AI_AGENT_STANDARDS.md
-
-    # Skip Stage 1 (useful when the local environment can't run
-    # google-genai, e.g. Termux + Python 3.14 cryptography ABI issues).
-    # Requires an existing stage1_normalized.json in the working directory.
     python3 ai-agents/orchestrator/hermes_agent.py --skip-stage1 --input docs/AI_AGENT_STANDARDS.md
 
-Environment variables (same as the GitHub Actions workflow):
-    GEMINI_API_KEY, GEMINI_MODEL
-    VALIDATION_PROVIDER (claude | groq | deepseek)
-    CLAUDE_API_KEY, CLAUDE_MODEL
-    GROQ_API_KEY
-    DEEPSEEK_API_KEY
-    REPORT_PROVIDER (groq | openai)
-    GROQ_REPORT_MODEL
-    OPENAI_API_KEY, OPENAI_MODEL
-
-    SKIP_STAGE1=1  (equivalent to --skip-stage1)
+See docs/HERMES.md for environment variables and provider details.
 """
 
 import argparse
@@ -37,18 +19,19 @@ import subprocess
 import sys
 from pathlib import Path
 
-PIPELINE_DIR = Path(__file__).resolve().parent.parent / "pipeline"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from router import (
+    RoutingError,
+    resolve_preprocess,
+    resolve_validation_provider,
+    resolve_report_provider,
+)
 
 STAGE1_OUT = "stage1_normalized.json"
 STAGE2_OUT = "stage2_validated.json"
 REPORT_MD = "Verification_Report.md"
 REPORT_JSON = "Verification_Report.json"
-
-VALIDATOR_SCRIPTS = {
-    "claude": "claude_validate.py",
-    "groq": "groq_validate.py",
-    "deepseek": "deepseek_validate.py",
-}
 
 
 def run_stage(name, cmd):
@@ -61,52 +44,62 @@ def run_stage(name, cmd):
     print(f"[HERMES] {name} completed successfully.")
 
 
+def require_env(stage_name, missing):
+    if missing:
+        print(
+            f"[HERMES] ::error:: {stage_name} is missing required environment "
+            f"variables: {', '.join(missing)}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Hermes Orchestrator (Phase 1 — local CLI)")
+    parser = argparse.ArgumentParser(description="Hermes Orchestrator (Phase 2 — router/providers)")
     parser.add_argument("--input", required=True, help="Path to the document/artifact to review")
     parser.add_argument(
         "--skip-stage1",
         action="store_true",
-        help="Skip Stage 1 (Gemini) and reuse an existing stage1_normalized.json. "
-             "Useful when the local environment can't run google-genai.",
+        help="Skip Stage 1 (Gemini) and reuse an existing stage1_normalized.json.",
     )
     args = parser.parse_args()
 
     skip_stage1 = args.skip_stage1 or os.environ.get("SKIP_STAGE1") == "1"
 
-    validation_provider = os.environ.get("VALIDATION_PROVIDER", "").strip().lower()
-    if validation_provider not in VALIDATOR_SCRIPTS:
-        print(
-            "::error::VALIDATION_PROVIDER must be one of "
-            f"{list(VALIDATOR_SCRIPTS.keys())} (got: '{validation_provider or '<unset>'}').",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+    validation_provider = os.environ.get("VALIDATION_PROVIDER", "")
+    report_provider = os.environ.get("REPORT_PROVIDER", "")
 
-    validator_script = PIPELINE_DIR / VALIDATOR_SCRIPTS[validation_provider]
+    try:
+        validator_script, validator_missing = resolve_validation_provider(validation_provider)
+        report_script, report_missing = resolve_report_provider(report_provider)
+    except RoutingError as e:
+        print(f"[HERMES] ::error:: {e}", file=sys.stderr)
+        sys.exit(1)
 
     # Stage 1 - Gemini preprocessing
     if skip_stage1:
         print("\n[HERMES] --- Stage 1 - Gemini preprocessing (SKIPPED) ---")
         if not os.path.exists(STAGE1_OUT):
             print(
-                f"::error::--skip-stage1 was set but {STAGE1_OUT} does not exist. "
-                "Provide an existing Stage 1 output file to skip Stage 1.",
+                f"::error::--skip-stage1 was set but {STAGE1_OUT} does not exist.",
                 file=sys.stderr,
             )
             sys.exit(1)
         print(f"[HERMES] Reusing existing {STAGE1_OUT}.")
     else:
+        preprocess_script, preprocess_missing = resolve_preprocess()
+        require_env("Stage 1 - Gemini preprocessing", preprocess_missing)
         run_stage(
             "Stage 1 - Gemini preprocessing",
             [
-                "python3", str(PIPELINE_DIR / "gemini_preprocess.py"),
+                "python3", str(preprocess_script),
                 "--input", args.input,
                 "--output", STAGE1_OUT,
             ],
         )
 
-    # Stage 2 - validation (provider selected via VALIDATION_PROVIDER)
+    # Stage 2 - validation
+    require_env(f"Stage 2 - {validation_provider} validation", validator_missing)
     run_stage(
         f"Stage 2 - {validation_provider} validation",
         [
@@ -117,10 +110,11 @@ def main():
     )
 
     # Stage 3 - report generation
+    require_env(f"Stage 3 - {report_provider} report", report_missing)
     run_stage(
         "Stage 3 - report generation",
         [
-            "python3", str(PIPELINE_DIR / "chatgpt_report.py"),
+            "python3", str(report_script),
             "--input", STAGE2_OUT,
             "--output-md", REPORT_MD,
             "--output-json", REPORT_JSON,
