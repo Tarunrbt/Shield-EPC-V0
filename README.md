@@ -22,9 +22,9 @@ Enterprise AI-powered HSE platform for EPC, Oil & Gas, Construction, Infrastruct
 | `docs/` | Supporting documentation (specs, ADRs, standards mapping, `AI_AGENT_STANDARDS.md`) |
 | `frontend/` | Web portal + mobile app (offline-first) |
 | `backend/` | API gateway, orchestrator, domain services |
-| `ai-agents/` | Agent definitions, prompts, evaluation sets; `ai-agents/pipeline/` holds stub scripts for the Gemini→Claude→ChatGPT review pipeline (not yet real API integrations) |
+| `ai-agents/` | Agent definitions, prompts, evaluation sets; `ai-agents/pipeline/` holds the real Gemini → Claude/Groq/DeepSeek → ChatGPT/Groq review pipeline scripts (live API integrations); `ai-agents/orchestrator/hermes_agent.py` is a local CLI coordinator for the same pipeline — see `docs/HERMES.md` |
 | `assets/` | Design assets, diagrams, brand materials |
-| `.github/workflows/multi-agent-review.yml` | CI workflow scaffold for the review pipeline — exists, unexecuted, calls stub scripts |
+| `.github/workflows/multi-agent-review.yml` | CI workflow for the review pipeline — live, tested, runs real Gemini/Groq/Claude/DeepSeek/ChatGPT API calls; provider selection via `VALIDATION_PROVIDER` and `REPORT_PROVIDER` repository variables |
 | `Verification_Report.md`, `Consistency_Report.md`, `Final_Audit_Report.md`, `Release_Notes.md` | Point-in-time audit reports, dated — see each file's own date before relying on it |
 
 ## AI Agent Configuration
