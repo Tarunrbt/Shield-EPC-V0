@@ -44,27 +44,6 @@ jobs:
             echo "::error::requirements.txt not found"
             exit 1
           fi
-      - name: Diagnose google-genai SDK
-        run: |
-          python - <<'PY'
-          import inspect
-          import google.genai
-          from google.genai import types
-
-          print("=== google-genai ===")
-          print(getattr(google.genai, "__version__", "unknown"))
-
-          print("\n=== HttpOptions ===")
-          print(inspect.signature(types.HttpOptions))
-
-          print("\n=== GenerateContentConfig ===")
-          print(inspect.signature(types.GenerateContentConfig))
-          PY
-
-          echo
-          echo "=== Installed packages ==="
-          python -m pip show google-genai
-          python -m pip show httpx
 
       - name: Debug Python paths
         run: |
@@ -73,12 +52,7 @@ jobs:
           find . -name "config.py"
           python -c "import os,sys; print('cwd=', os.getcwd()); print('sys.path=', sys.path)"
 
-      # ----------------------------
-      # Stage 1 - Preprocessing
-      # ----------------------------
-
       - name: Stage 1 - Gemini preprocessing
-        if: ${{ vars.PREPROCESS_PROVIDER == 'gemini' || vars.PREPROCESS_PROVIDER == '' }}
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
@@ -88,26 +62,11 @@ jobs:
             --input "${{ github.event.inputs.input_document || 'docs/AI_AGENT_STANDARDS.md' }}" \
             --output stage1_normalized.json
 
-      - name: Stage 1 - Groq preprocessing
-        if: ${{ vars.PREPROCESS_PROVIDER == 'groq' }}
-        env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GROQ_MODEL: ${{ vars.GROQ_MODEL }}
-          PYTHONPATH: ${{ github.workspace }}
-        run: |
-          python ai-agents/pipeline/groq_preprocess.py \
-            --input "${{ github.event.inputs.input_document || 'docs/AI_AGENT_STANDARDS.md' }}" \
-            --output stage1_normalized.json
-
-      # ----------------------------
-      # Stage 2 - Validation
-      # ----------------------------
-
       - name: Stage 2 - Claude validation
         if: ${{ vars.VALIDATION_PROVIDER == 'claude' }}
         env:
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-          CLAUDE_MODEL: claude-sonnet-5
+          CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
         run: |
           python ai-agents/pipeline/claude_validate.py \
             --input stage1_normalized.json \
@@ -131,38 +90,14 @@ jobs:
             --input stage1_normalized.json \
             --output stage2_validated.json
 
-      # ----------------------------
-      # Verify Stage 2 Output
-      # ----------------------------
-
-      - name: Verify Stage 2 output
-        run: |
-          if [ ! -f stage2_validated.json ]; then
-            echo "::error::stage2_validated.json missing. Check VALIDATION_PROVIDER."
-            exit 1
-          fi
-
-      # ----------------------------
-      # Stage 3 - Report Generation
-      # ----------------------------
-
-      - name: Stage 3 - Report generation
+      - name: Stage 3 - ChatGPT report generation
         env:
-          REPORT_PROVIDER: ${{ vars.REPORT_PROVIDER }}
-          VALIDATION_PROVIDER: ${{ vars.VALIDATION_PROVIDER }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GROQ_REPORT_MODEL: ${{ vars.GROQ_REPORT_MODEL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
         run: |
           python ai-agents/pipeline/chatgpt_report.py \
             --input stage2_validated.json \
             --output-md Verification_Report.md \
             --output-json Verification_Report.json
-
-      # ----------------------------
-      # Upload Artifacts
-      # ----------------------------
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -177,7 +112,6 @@ jobs:
 
   human-review-required:
     needs: multi-agent-review
-    if: always()
     runs-on: ubuntu-latest
 
     steps:
@@ -185,144 +119,3 @@ jobs:
         run: |
           echo "Pipeline completed."
           echo "Human review is required before approval or merge."
-
-  notify:
-    needs: [multi-agent-review, human-review-required]
-    if: always()
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: read
-    steps:
-      - name: Determine status
-        id: meta
-        run: |
-          if [ "${{ needs.multi-agent-review.result }}" = "success" ]; then
-            echo "status=SUCCESS" >> "$GITHUB_OUTPUT"
-          else
-            echo "status=FAILURE" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: multi-agent-review-outputs
-          path: notify-artifacts
-        continue-on-error: true
-
-      - name: Check attachments
-        id: files
-        run: |
-          FILES=""
-          if [ -f notify-artifacts/Verification_Report.md ]; then
-            FILES="notify-artifacts/Verification_Report.md"
-          fi
-          if [ -f notify-artifacts/Verification_Report.json ]; then
-            if [ -n "$FILES" ]; then
-              FILES="$FILES,notify-artifacts/Verification_Report.json"
-            else
-              FILES="notify-artifacts/Verification_Report.json"
-            fi
-          fi
-          echo "attachments=$FILES" >> "$GITHUB_OUTPUT"
-
-      - name: Send email (attachments, primary from)
-        id: email_att_primary
-        if: ${{ vars.NOTIFY_EMAIL == 'true' && steps.files.outputs.attachments != '' }}
-        continue-on-error: true
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: ${{ secrets.MAIL_SERVER }}
-          server_port: ${{ secrets.MAIL_PORT }}
-          username: ${{ secrets.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          to: ${{ secrets.MAIL_TO }}
-          from: Shield EPC CI <${{ secrets.MAIL_USERNAME }}>
-          subject: "[${{ steps.meta.outputs.status }}] ${{ github.repository }} run #${{ github.run_number }}"
-          body: |
-            Status: ${{ steps.meta.outputs.status }}
-            Repository: ${{ github.repository }}
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            Run Number: ${{ github.run_number }}
-            Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          attachments: ${{ steps.files.outputs.attachments }}
-
-      - name: Send email (attachments, fallback from)
-        if: ${{ vars.NOTIFY_EMAIL == 'true' && steps.files.outputs.attachments != '' && steps.email_att_primary.outcome == 'failure' }}
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: ${{ secrets.MAIL_SERVER }}
-          server_port: ${{ secrets.MAIL_PORT }}
-          username: ${{ secrets.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          to: ${{ secrets.MAIL_TO }}
-          from: ${{ secrets.MAIL_USERNAME }}
-          subject: "[${{ steps.meta.outputs.status }}] ${{ github.repository }} run #${{ github.run_number }}"
-          body: |
-            Status: ${{ steps.meta.outputs.status }}
-            Repository: ${{ github.repository }}
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            Run Number: ${{ github.run_number }}
-            Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          attachments: ${{ steps.files.outputs.attachments }}
-
-      - name: Send email (no attachments, primary from)
-        id: email_noatt_primary
-        if: ${{ vars.NOTIFY_EMAIL == 'true' && steps.files.outputs.attachments == '' }}
-        continue-on-error: true
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: ${{ secrets.MAIL_SERVER }}
-          server_port: ${{ secrets.MAIL_PORT }}
-          username: ${{ secrets.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          to: ${{ secrets.MAIL_TO }}
-          from: Shield EPC CI <${{ secrets.MAIL_USERNAME }}>
-          subject: "[${{ steps.meta.outputs.status }}] ${{ github.repository }} run #${{ github.run_number }}"
-          body: |
-            Status: ${{ steps.meta.outputs.status }}
-            Repository: ${{ github.repository }}
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            Run Number: ${{ github.run_number }}
-            Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            Note: No report files were found to attach.
-
-      - name: Send email (no attachments, fallback from)
-        if: ${{ vars.NOTIFY_EMAIL == 'true' && steps.files.outputs.attachments == '' && steps.email_noatt_primary.outcome == 'failure' }}
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: ${{ secrets.MAIL_SERVER }}
-          server_port: ${{ secrets.MAIL_PORT }}
-          username: ${{ secrets.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          to: ${{ secrets.MAIL_TO }}
-          from: ${{ secrets.MAIL_USERNAME }}
-          subject: "[${{ steps.meta.outputs.status }}] ${{ github.repository }} run #${{ github.run_number }}"
-          body: |
-            Status: ${{ steps.meta.outputs.status }}
-            Repository: ${{ github.repository }}
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            Run Number: ${{ github.run_number }}
-            Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            Note: No report files were found to attach.
-
-      
-      - name: Send Slack notification
-        if: ${{ vars.NOTIFY_SLACK == 'true' }}
-        run: |
-          curl -sS -X POST -H 'Content-type: application/json' \
-            --data "{\"text\":\"[${{ steps.meta.outputs.status }}] ${{ github.repository }} run #${{ github.run_number }} on ${{ github.ref_name }} (${{ github.sha }})\nRun: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
-            "${{ secrets.SLACK_WEBHOOK_URL }}"
-
-      - name: Send Telegram notification
-        if: ${{ vars.NOTIFY_TELEGRAM == 'true' }}
-        run: |
-          MSG="[${{ steps.meta.outputs.status }}] ${{ github.repository }} run #${{ github.run_number }} on ${{ github.ref_name }} (${{ github.sha }})
-          https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          curl -sS -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            --data-urlencode "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-            --data-urlencode "text=$MSG"
