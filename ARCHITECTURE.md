@@ -1,6 +1,6 @@
 # Shield EPC — Architecture
 
-**Status**: Frozen v1.0
+**Status**: Accepted (v1.0) — pending Verified Stable per ADR promotion rules
 **Last updated**: 11 Jul 2026
 **Owner**: Tarun Kumar Saxena
 **Related**: `docs/ShieldEPC_Architecture_Spec_v1.md` (full detailed spec), `ARCHITECTURE_REVIEW.md` (review log)
