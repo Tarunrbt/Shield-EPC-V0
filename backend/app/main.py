@@ -1,11 +1,19 @@
 from __future__ import annotations
 
-from fastapi import FastAPI
-
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.generate import router as generate_router
 from app.api.health import router as health_router
+from app.api.tenants import router as tenant_router
+from app.api.projects import router as project_router
+from core.exceptions import (
+    ShieldEPCError,
+    ValidationFailed,
+    TenantNotFound,
+    DocumentNotFound,
+)
 
 app = FastAPI(title="Shield EPC Backend", version="0.1.0")
 
@@ -24,12 +32,37 @@ app.add_middleware(
         "http://127.0.0.1:5500",
         "http://localhost:5500",
     ],
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type"],
 )
 
+# Phase 5B: map domain exceptions (core/exceptions.py) to HTTP responses.
+# Endpoints (app/api/tenants.py, app/api/projects.py) deliberately do not
+# catch these -- they propagate here so the mapping stays in one place.
+_STATUS_BY_EXCEPTION = {
+    ValidationFailed: 400,
+    TenantNotFound: 404,
+    DocumentNotFound: 404,
+}
+
+
+@app.exception_handler(ShieldEPCError)
+def shield_epc_error_handler(request: Request, exc: ShieldEPCError) -> JSONResponse:
+    status_code = 500
+    for exc_type, code in _STATUS_BY_EXCEPTION.items():
+        if isinstance(exc, exc_type):
+            status_code = code
+            break
+    return JSONResponse(
+        status_code=status_code,
+        content={"error": {"code": str(exc.code), "message": exc.message}},
+    )
+
+
 app.include_router(health_router)
 app.include_router(generate_router)
+app.include_router(tenant_router)
+app.include_router(project_router)
 
 
 @app.get("/")
