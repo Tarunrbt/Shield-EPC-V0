@@ -5,6 +5,7 @@ from pathlib import Path
 
 _temp_dir = Path(tempfile.mkdtemp(prefix="shield_epc_api_test_"))
 os.environ["AUDIT_LOG_PATH"] = str(_temp_dir / "audit_log.jsonl")
+os.environ["DB_PATH"] = str(_temp_dir / "shield_epc.db")
 
 from fastapi.testclient import TestClient
 

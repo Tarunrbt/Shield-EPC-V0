@@ -49,10 +49,13 @@ orchestrator = Orchestrator(
 # constructing their own repository or service instances.
 
 from app.config import DB_PATH
+from app.db.database import init_schema
 from app.db.repositories.tenant_repository import TenantRepository
 from app.db.repositories.project_repository import ProjectRepository
 from app.services.tenant_service import TenantService
 from app.services.project_service import ProjectService
+
+init_schema(DB_PATH)
 
 tenant_repository = TenantRepository(db_path=DB_PATH)
 project_repository = ProjectRepository(db_path=DB_PATH)
