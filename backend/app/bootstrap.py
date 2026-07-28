@@ -41,3 +41,21 @@ orchestrator = Orchestrator(
     ptw_jsa_agent=ptw_jsa_agent,
 )
 
+
+# ---- Phase 5A: Persistence layer wiring (Tenant/Project) -------------------
+#
+# Same module-level singleton pattern as the orchestrator above. API route
+# modules import tenant_service / project_service from here, never
+# constructing their own repository or service instances.
+
+from app.config import DB_PATH
+from app.db.repositories.tenant_repository import TenantRepository
+from app.db.repositories.project_repository import ProjectRepository
+from app.services.tenant_service import TenantService
+from app.services.project_service import ProjectService
+
+tenant_repository = TenantRepository(db_path=DB_PATH)
+project_repository = ProjectRepository(db_path=DB_PATH)
+
+tenant_service = TenantService(tenant_repository)
+project_service = ProjectService(project_repository)
