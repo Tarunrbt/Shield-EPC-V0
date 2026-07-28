@@ -36,6 +36,10 @@ def _make_orchestrator():
     ptw_jsa_agent.name = "ptw_jsa"
     ptw_jsa_agent.version = "1.0"
 
+    incident_investigation_agent = MagicMock()
+    incident_investigation_agent.name = "incident_investigation"
+    incident_investigation_agent.version = "1.0"
+
     orchestrator = Orchestrator(
         audit_log=audit_log,
         envelope_assembler=envelope_assembler,
@@ -43,6 +47,7 @@ def _make_orchestrator():
         document_generator_agent=document_generator_agent,
         risk_assessment_agent=risk_assessment_agent,
         ptw_jsa_agent=ptw_jsa_agent,
+        incident_investigation_agent=incident_investigation_agent,
     )
     return orchestrator, audit_log, envelope_assembler, document_generator_agent
 

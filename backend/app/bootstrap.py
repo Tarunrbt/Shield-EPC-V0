@@ -19,6 +19,7 @@ from __future__ import annotations
 from app.agents.document_generator import DocumentGeneratorAgent
 from app.agents.risk_assessment import RiskAssessmentAgent
 from app.agents.ptw_jsa import PTWJSAAgent
+from app.agents.incident_investigation import IncidentInvestigationAgent
 from app.agents.verifier import VerifierAgent
 from app.audit.log import AuditLog
 from app.config import AUDIT_LOG_PATH
@@ -31,6 +32,7 @@ verifier = VerifierAgent()
 document_generator_agent = DocumentGeneratorAgent()
 risk_assessment_agent = RiskAssessmentAgent()
 ptw_jsa_agent = PTWJSAAgent()
+incident_investigation_agent = IncidentInvestigationAgent()
 
 orchestrator = Orchestrator(
     audit_log=audit_log,
@@ -39,6 +41,7 @@ orchestrator = Orchestrator(
     document_generator_agent=document_generator_agent,
     risk_assessment_agent=risk_assessment_agent,
     ptw_jsa_agent=ptw_jsa_agent,
+    incident_investigation_agent=incident_investigation_agent,
 )
 
 

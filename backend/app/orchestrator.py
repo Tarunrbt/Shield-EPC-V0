@@ -46,6 +46,7 @@ class Orchestrator:
         document_generator_agent: Agent,
         risk_assessment_agent: Agent,
         ptw_jsa_agent: Agent,
+        incident_investigation_agent: Agent,
     ) -> None:
         self.audit_log = audit_log
         self.envelope_assembler = envelope_assembler
@@ -54,6 +55,7 @@ class Orchestrator:
             "document_generation": document_generator_agent,
             "risk_assessment": risk_assessment_agent,
             "ptw_jsa": ptw_jsa_agent,
+            "incident_investigation": incident_investigation_agent,
         }
 
     def handle(
@@ -73,6 +75,7 @@ class Orchestrator:
         - "document_generation" → DocumentGeneratorAgent
         - "risk_assessment" → RiskAssessmentAgent
         - "ptw_jsa" → PTWJSAAgent
+        - "incident_investigation" → IncidentInvestigationAgent
 
         Verification and envelope assembly happen after agent selection.
         """
