@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.generate import router as generate_router
+from app.api.incident_investigation import router as incident_investigation_router
 from app.api.health import router as health_router
 from app.api.tenants import router as tenant_router
 from app.api.projects import router as project_router
@@ -61,6 +62,7 @@ def shield_epc_error_handler(request: Request, exc: ShieldEPCError) -> JSONRespo
 
 app.include_router(health_router)
 app.include_router(generate_router)
+app.include_router(incident_investigation_router)
 app.include_router(tenant_router)
 app.include_router(project_router)
 
