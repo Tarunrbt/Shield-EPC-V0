@@ -58,6 +58,10 @@ class EnvelopeAssembler:
         human_review_required: bool,
         human_review_reason: HumanReviewReason | None = None,
         audit_trail_id: str,
+        five_whys: list[str] | None = None,
+        fishbone_causes: dict | None = None,
+        bowtie: dict | None = None,
+        investigator_signoff: dict | None = None,
     ) -> ResponseEnvelope:
         """
         Builds one ResponseEnvelope per the §5 contract. All fields are
@@ -78,6 +82,10 @@ class EnvelopeAssembler:
                 answer=answer,
                 confidence_score=confidence_score,
                 confidence_basis=confidence_basis,
+                five_whys=five_whys,
+                fishbone_causes=fishbone_causes,
+                bowtie=bowtie,
+                investigator_signoff=investigator_signoff,
             ),
             source_of_reasoning=source_of_reasoning,
             missing_information=missing_information or [],

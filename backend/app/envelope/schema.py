@@ -33,6 +33,11 @@ class EnvelopeContent(BaseModel):
     confidence_score: float = Field(ge=0.0, le=1.0)
     confidence_basis: str
 
+    five_whys: list[str] | None = None
+    fishbone_causes: dict | None = None
+    bowtie: dict | None = None
+    investigator_signoff: dict | None = None
+
 
 HumanReviewReason = Literal[
     "risk_rating_high",

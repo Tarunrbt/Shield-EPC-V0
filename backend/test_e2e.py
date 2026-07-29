@@ -19,6 +19,7 @@ from app.envelope.middleware import EnvelopeAssembler
 from app.envelope.schema import ResponseEnvelope
 from app.orchestrator import Orchestrator
 from app.agents.verifier import VerifierAgent
+from app.agents.incident_investigation import IncidentInvestigationAgent
 
 
 def check(condition: bool, message: str) -> None:
@@ -44,6 +45,7 @@ def main() -> None:
         document_generator_agent=DocumentGeneratorAgent(),
         risk_assessment_agent=RiskAssessmentAgent(),
         ptw_jsa_agent=PTWJSAAgent(),
+        incident_investigation_agent=IncidentInvestigationAgent(),
     )
 
     agent = DocumentGeneratorAgent()
@@ -116,6 +118,10 @@ def main() -> None:
         orchestrator, tenant_id, user_id
     )
 
+    test_incident_investigation_envelope_compatibility(
+        orchestrator, tenant_id, user_id
+    )
+
     print("\n✅ Phase 1 end-to-end wiring test PASSED")
 
 
@@ -170,6 +176,79 @@ def test_risk_assessment_and_ptw_jsa_envelope_compatibility(orchestrator, tenant
     check(
         "JOB SAFETY ANALYSIS" in jsa_envelope.content.answer,
         "ptw_jsa: envelope answer contains rendered JSA content",
+    )
+
+
+def test_incident_investigation_envelope_compatibility(
+    orchestrator,
+    tenant_id,
+    user_id,
+):
+    incident_envelope = orchestrator.handle(
+        operation_type="incident_investigation",
+        request={
+            "incident_description": "Worker slipped on wet floor",
+            "five_whys": [
+                "Worker slipped",
+                "Floor was wet",
+                "Leak was not repaired",
+            ],
+            "fishbone_causes": {
+                "people_factors": ["Inadequate hazard awareness"],
+                "process": ["No inspection routine"],
+                "equipment": [],
+                "materials": [],
+                "environment": ["Wet floor"],
+            },
+            "bowtie_top_event": "Slip and fall",
+            "bowtie_threats": ["Wet surface"],
+            "bowtie_consequences": ["Minor injury"],
+            "preventive_barriers": ["Routine inspections"],
+            "mitigative_barriers": ["First aid"],
+        },
+        tenant_id=tenant_id,
+        user_id=user_id,
+    )
+
+    check(
+        isinstance(incident_envelope, ResponseEnvelope),
+        "incident_investigation: handle() returns ResponseEnvelope",
+    )
+
+    check(
+        incident_envelope.human_review_required is True,
+        "incident_investigation: human review required",
+    )
+
+    check(
+        incident_envelope.human_review_reason == "statutory_requirement",
+        "incident_investigation: review reason preserved",
+    )
+
+    check(
+        incident_envelope.content.investigator_signoff["signed_off"] is False,
+        "incident_investigation: investigator sign-off remains unset",
+    )
+
+    check(
+        incident_envelope.content.five_whys[0] == "Worker slipped",
+        "incident_investigation: five_whys preserved",
+    )
+
+    check(
+        incident_envelope.content.fishbone_causes["people_factors"]
+        == ["Inadequate hazard awareness"],
+        "incident_investigation: fishbone preserved",
+    )
+
+    check(
+        incident_envelope.content.bowtie["top_event"] == "Slip and fall",
+        "incident_investigation: bowtie preserved",
+    )
+
+    check(
+        bool(incident_envelope.audit_trail_id),
+        "incident_investigation: audit_trail_id generated",
     )
 
 

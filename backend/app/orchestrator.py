@@ -208,6 +208,10 @@ class Orchestrator:
             "applicable_standards",
             "human_review_required",
             "human_review_reason",
+            "five_whys",
+            "fishbone_causes",
+            "bowtie",
+            "investigator_signoff",
         }
 
         envelope_payload = {
