@@ -43,3 +43,7 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 - `ai-agents/pipeline/gemini_preprocess.py`, `claude_validate.py`, `chatgpt_report.py` — stub scripts defining the pipeline's I/O contract; **do not yet call any provider API** — each file documents this in its own header
 - `Verification_Report.md`, `Consistency_Report.md`, `Final_Audit_Report.md`, `Release_Notes.md` — audit reports for this session, all explicitly distinguishing user-confirmed claims (GitHub secrets, via screenshot) from claims verified directly in-session (documentation consistency) from claims not yet true (workflow execution, real pipeline functionality)
 - `README.md` repository map updated to include the new workflow, pipeline, and report files
+
+## Phase 4B
+- Changed `InvestigatorSignoff` schema: `signed_off/investigator_name/signoff_date` → `investigator_id/status/signed_at`
+- `investigator_id` now optional while pending, required once signed/rejected — avoids fabricated placeholder identifiers
