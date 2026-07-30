@@ -36,6 +36,7 @@ def orchestrator(tmp_path):
     from app.agents.risk_assessment import RiskAssessmentAgent
     from app.agents.ptw_jsa import PTWJSAAgent
     from app.agents.incident_investigation import IncidentInvestigationAgent
+    from app.agents.training_competency import TrainingCompetencyAgent
     from app.agents.verifier import VerifierAgent
     from app.audit.log import AuditLog
     from app.envelope.middleware import EnvelopeAssembler
@@ -52,4 +53,5 @@ def orchestrator(tmp_path):
         risk_assessment_agent=RiskAssessmentAgent(),
         ptw_jsa_agent=PTWJSAAgent(),
         incident_investigation_agent=IncidentInvestigationAgent(),
+        training_competency_agent=TrainingCompetencyAgent()
     )

@@ -40,6 +40,10 @@ def _make_orchestrator():
     incident_investigation_agent.name = "incident_investigation"
     incident_investigation_agent.version = "1.0"
 
+    training_competency_agent = MagicMock()
+    training_competency_agent.name = "training_competency"
+    training_competency_agent.version = "1.0"
+
     orchestrator = Orchestrator(
         audit_log=audit_log,
         envelope_assembler=envelope_assembler,
@@ -48,6 +52,7 @@ def _make_orchestrator():
         risk_assessment_agent=risk_assessment_agent,
         ptw_jsa_agent=ptw_jsa_agent,
         incident_investigation_agent=incident_investigation_agent,
+        training_competency_agent=training_competency_agent,
     )
     return orchestrator, audit_log, envelope_assembler, document_generator_agent
 
