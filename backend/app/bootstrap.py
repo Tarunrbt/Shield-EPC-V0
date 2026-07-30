@@ -33,6 +33,7 @@ document_generator_agent = DocumentGeneratorAgent()
 risk_assessment_agent = RiskAssessmentAgent()
 ptw_jsa_agent = PTWJSAAgent()
 incident_investigation_agent = IncidentInvestigationAgent()
+from app.agents.training_competency import TrainingCompetencyAgent
 
 orchestrator = Orchestrator(
     audit_log=audit_log,
@@ -42,6 +43,7 @@ orchestrator = Orchestrator(
     risk_assessment_agent=risk_assessment_agent,
     ptw_jsa_agent=ptw_jsa_agent,
     incident_investigation_agent=incident_investigation_agent,
+    training_competency_agent = TrainingCompetencyAgent()
 )
 
 

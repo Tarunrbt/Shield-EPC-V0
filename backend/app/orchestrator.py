@@ -47,6 +47,8 @@ class Orchestrator:
         risk_assessment_agent: Agent,
         ptw_jsa_agent: Agent,
         incident_investigation_agent: Agent,
+        training_competency_agent: Agent,
+
     ) -> None:
         self.audit_log = audit_log
         self.envelope_assembler = envelope_assembler
@@ -56,6 +58,7 @@ class Orchestrator:
             "risk_assessment": risk_assessment_agent,
             "ptw_jsa": ptw_jsa_agent,
             "incident_investigation": incident_investigation_agent,
+            "training_competency": training_competency_agent, 
         }
 
     def handle(

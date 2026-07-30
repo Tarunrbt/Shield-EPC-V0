@@ -100,9 +100,9 @@ def test_human_review_required_true(agent, valid_request):
 def test_investigator_signoff_always_unset(agent, valid_request):
     result = agent.run(valid_request)
     assert result["investigator_signoff"] == {
-        "signed_off": False,
-        "investigator_name": None,
-        "signoff_date": None,
+        "investigator_id": None,
+        "status": "pending",
+        "signed_at": None,
     }
 
 

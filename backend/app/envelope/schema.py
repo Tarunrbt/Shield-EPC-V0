@@ -9,10 +9,11 @@ that section exactly (README.md: "Code that doesn't match this document
 is a bug in the code or a stale document").
 """
 
+from datetime import datetime
 from enum import Enum
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 class SourceType(str, Enum):
     STANDARD_CLAUSE = "standard_clause"
@@ -27,6 +28,39 @@ class SourceOfReasoning(BaseModel):
     retrieved_date: Optional[str] = None
     excerpt_ref: Optional[str] = None
 
+class InvestigatorSignoff(BaseModel):
+    investigator_id: str | None = None
+    status: Literal["pending", "signed", "rejected"] = "pending"
+    signed_at: datetime | None = Field(
+        default=None,
+        description="ISO 8601 timezone-aware timestamp",
+    )
+
+    @model_validator(mode="after")
+    def check_signed_at_consistency(self):
+        if self.status == "pending" and self.signed_at is not None:
+            raise ValueError(
+                "signed_at must be None while status is 'pending'"
+            )
+
+        if (
+            self.status in {"signed", "rejected"}
+            and self.investigator_id is None
+        ):
+            raise ValueError(
+                "investigator_id is required when status is 'signed' or 'rejected'"
+            )
+
+        if self.signed_at is not None and (
+            self.signed_at.tzinfo is None
+            or self.signed_at.utcoffset() is None
+        ):
+            raise ValueError(
+                "signed_at must be timezone-aware"
+            )
+
+        return self
+
 
 class EnvelopeContent(BaseModel):
     answer: str
@@ -36,7 +70,7 @@ class EnvelopeContent(BaseModel):
     five_whys: list[str] | None = None
     fishbone_causes: dict | None = None
     bowtie: dict | None = None
-    investigator_signoff: dict | None = None
+    investigator_signoff: InvestigatorSignoff | None = None
 
 
 HumanReviewReason = Literal[

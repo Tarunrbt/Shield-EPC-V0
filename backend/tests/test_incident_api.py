@@ -47,7 +47,7 @@ def test_incident_investigation_returns_200():
     assert body["content"]["five_whys"] == ["1", "2", "3"]
     assert body["content"]["fishbone_causes"] == payload["fishbone_causes"]
     assert body["content"]["bowtie"]["top_event"] == "Slip"
-    assert body["content"]["investigator_signoff"]["signed_off"] is False
+    assert body["content"]["investigator_signoff"]["status"] == "pending"
 
     assert body["audit_trail_id"]
 

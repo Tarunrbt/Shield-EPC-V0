@@ -146,9 +146,9 @@ class IncidentInvestigationAgent(Agent):
                 "mitigative_barriers": validated.mitigative_barriers,
             },
             "investigator_signoff": {
-                "signed_off": False,
-                "investigator_name": None,
-                "signoff_date": None,
+                "investigator_id": None,
+                "status": "pending",
+                "signed_at": None,
             },
             "human_review_required": True,
             "human_review_reason": "statutory_requirement",

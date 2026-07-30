@@ -226,7 +226,7 @@ def test_incident_investigation_envelope_compatibility(
     )
 
     check(
-        incident_envelope.content.investigator_signoff["signed_off"] is False,
+        incident_envelope.content.investigator_signoff.status == "pending",
         "incident_investigation: investigator sign-off remains unset",
     )
 
