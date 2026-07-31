@@ -133,6 +133,24 @@ This is not cosmetic. `confidence_score` without `confidence_basis` is exactly t
 
 ---
 
+### 5.1 Agent-Specific Content Extensions
+
+The `content` block above shows the core fields present on every envelope, regardless of agent. Some agents attach additional, agent-specific fields to `content`. These extensions are optional and are only populated by the agent that produces them.
+
+Currently, the Incident Investigation Agent attaches:
+
+- five_whys
+- fishbone_causes
+- bowtie
+- investigator_signoff
+
+`investigator_signoff` uses conditional validation:
+
+- `status="pending"` → `investigator_id` may be `null`; `signed_at` must be `null`.
+- `status="signed"` or `status="rejected"` → `investigator_id` is required; `signed_at` is required and must be timezone-aware.
+
+These fields are optional extensions and are not present in envelopes produced by other agents.
+
 ## 6. Zero Hallucination Policy — Implementation, Not Slogan
 
 "Zero hallucination" as a stated principle is unenforceable at the model level — no LLM has a hard guarantee against this. What's enforceable is the **system-level architecture around the model**:
