@@ -51,6 +51,14 @@ class InvestigatorSignoff(BaseModel):
                 "investigator_id is required when status is 'signed' or 'rejected'"
             )
 
+        if (
+            self.status in {"signed", "rejected"}
+            and self.signed_at is None
+        ):
+            raise ValueError(
+                "signed_at is required when status is 'signed' or 'rejected'"
+            )
+
         if self.signed_at is not None and (
             self.signed_at.tzinfo is None
             or self.signed_at.utcoffset() is None
