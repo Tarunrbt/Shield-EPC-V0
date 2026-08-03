@@ -16,6 +16,7 @@ import os
 import sys
 
 from openai import OpenAI
+from openai_client import create_client
 
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 
@@ -53,15 +54,7 @@ def main():
     with open(args.input, "r", encoding="utf-8") as f:
         stage1 = json.load(f)
 
-    base_url = os.environ.get("OPENAI_BASE_URL", "").strip()
-
-    if base_url:
-        client = OpenAI(api_key=api_key, base_url=base_url)
-    else:
-        client = OpenAI(
-            api_key=api_key,
-            base_url="https://api.groq.com/openai/v1",
-        )
+    client = create_client(api_key, default_base_url="https://api.groq.com/openai/v1")
 
     response = client.chat.completions.create(
         model=GROQ_MODEL,

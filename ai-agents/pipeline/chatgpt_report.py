@@ -17,6 +17,7 @@ import sys
 from datetime import datetime, timezone
 
 from openai import OpenAI
+from openai_client import create_client
 
 SYSTEM_PROMPT = (
     "You are Stage 3 in an HSE automation pipeline. "
@@ -59,12 +60,7 @@ def main():
         if not report_model:
             print("::error::OPENAI_MODEL not set in environment.", file=sys.stderr)
             sys.exit(1)
-        base_url = os.environ.get("OPENAI_BASE_URL", "").strip()
-
-        if base_url:
-            client = OpenAI(api_key=api_key, base_url=base_url)
-        else:
-            client = OpenAI(api_key=api_key)
+        client = create_client(api_key)
         supports_json_mode = True
 
     else:
