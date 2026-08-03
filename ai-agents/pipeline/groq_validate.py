@@ -53,7 +53,15 @@ def main():
     with open(args.input, "r", encoding="utf-8") as f:
         stage1 = json.load(f)
 
-    client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
+    base_url = os.environ.get("OPENAI_BASE_URL", "").strip()
+
+    if base_url:
+        client = OpenAI(api_key=api_key, base_url=base_url)
+    else:
+        client = OpenAI(
+            api_key=api_key,
+            base_url="https://api.groq.com/openai/v1",
+        )
 
     response = client.chat.completions.create(
         model=GROQ_MODEL,
