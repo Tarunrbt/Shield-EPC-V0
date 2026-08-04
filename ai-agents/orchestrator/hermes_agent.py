@@ -28,6 +28,8 @@ from router import (
     resolve_report_provider,
 )
 
+from state import load_state, save_state, clear_state
+
 STAGE1_OUT = "stage1_normalized.json"
 STAGE2_OUT = "stage2_validated.json"
 REPORT_MD = "Verification_Report.md"
@@ -62,9 +64,38 @@ def main():
         action="store_true",
         help="Skip Stage 1 (Gemini) and reuse an existing stage1_normalized.json.",
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume from the last successfully completed stage.",
+    )
     args = parser.parse_args()
 
     skip_stage1 = args.skip_stage1 or os.environ.get("SKIP_STAGE1") == "1"
+
+    resume = args.resume
+    state = load_state() if resume else None
+
+    resume_from = None
+    if resume:
+        if state is None:
+            print(
+                "[HERMES] ::error:: --resume was set but no .hermes_state.json "
+                "was found. Run the full pipeline first (without --resume).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        last = state.get("last_completed_stage")
+        if last not in ("stage1", "stage2"):
+            print(
+                f"[HERMES] ::error:: .hermes_state.json has an unsupported "
+                f"last_completed_stage: {last!r}. Delete .hermes_state.json "
+                f"and run the full pipeline.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        resume_from = last
+        print(f"[HERMES] --resume: resuming after '{resume_from}' (from .hermes_state.json).")
 
     validation_provider = os.environ.get("VALIDATION_PROVIDER", "")
     report_provider = os.environ.get("REPORT_PROVIDER", "")
@@ -77,7 +108,16 @@ def main():
         sys.exit(1)
 
     # Stage 1 - Gemini preprocessing
-    if skip_stage1:
+    if resume_from in ("stage1", "stage2"):
+        print("\n[HERMES] --- Stage 1 - Gemini preprocessing (SKIPPED — resuming) ---")
+        if not os.path.exists(STAGE1_OUT):
+            print(
+                f"::error::--resume requires an existing {STAGE1_OUT} but it was not found.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        print(f"[HERMES] Reusing existing {STAGE1_OUT}.")
+    elif skip_stage1:
         print("\n[HERMES] --- Stage 1 - Gemini preprocessing (SKIPPED) ---")
         if not os.path.exists(STAGE1_OUT):
             print(
@@ -86,6 +126,7 @@ def main():
             )
             sys.exit(1)
         print(f"[HERMES] Reusing existing {STAGE1_OUT}.")
+        save_state("stage1", {"stage1": STAGE1_OUT})
     else:
         preprocess_script, preprocess_missing = resolve_preprocess()
         require_env("Stage 1 - Gemini preprocessing", preprocess_missing)
@@ -97,17 +138,29 @@ def main():
                 "--output", STAGE1_OUT,
             ],
         )
+        save_state("stage1", {"stage1": STAGE1_OUT})
 
     # Stage 2 - validation
-    require_env(f"Stage 2 - {validation_provider} validation", validator_missing)
-    run_stage(
-        f"Stage 2 - {validation_provider} validation",
-        [
-            "python3", str(validator_script),
-            "--input", STAGE1_OUT,
-            "--output", STAGE2_OUT,
-        ],
-    )
+    if resume_from == "stage2":
+        print("\n[HERMES] --- Stage 2 - validation (SKIPPED — resuming) ---")
+        if not os.path.exists(STAGE2_OUT):
+            print(
+                f"::error::--resume requires an existing {STAGE2_OUT} but it was not found.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        print(f"[HERMES] Reusing existing {STAGE2_OUT}.")
+    else:
+        require_env(f"Stage 2 - {validation_provider} validation", validator_missing)
+        run_stage(
+            f"Stage 2 - {validation_provider} validation",
+            [
+                "python3", str(validator_script),
+                "--input", STAGE1_OUT,
+                "--output", STAGE2_OUT,
+            ],
+        )
+        save_state("stage2", {"stage1": STAGE1_OUT, "stage2": STAGE2_OUT})
 
     # Stage 3 - report generation
     require_env(f"Stage 3 - {report_provider} report", report_missing)
@@ -121,6 +174,7 @@ def main():
         ],
     )
 
+    clear_state()
     print("\n[HERMES] Pipeline completed successfully.")
     print(f"[HERMES] Outputs: {STAGE1_OUT}, {STAGE2_OUT}, {REPORT_MD}, {REPORT_JSON}")
     print("[HERMES] Human review is required before approval or merge.")
