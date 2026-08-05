@@ -1,0 +1,20 @@
+Candidate,CurrentTreeHits,HistoryHits,VultureFlag,RuffFlag,Classification,Notes
+ai-agents/pipeline/groq_preprocess.py,0,1,0,0,Candidate Unused,"No current-tree textual references, but file appears in git history."
+
+Known limitations
+
+- git grep detects only textual references.
+- It cannot detect runtime dispatch.
+- It cannot detect importlib usage.
+- It cannot detect dynamically constructed filenames.
+- It cannot detect subprocess execution built from configuration.
+- It cannot detect plugin registration.
+- It cannot detect external orchestration outside the repository.
+
+Therefore:
+
+Zero textual references indicate a strong orphaning signal,
+but are not sufficient by themselves to prove a module is unused.
+
+Manual review remains required before any module can be classified as
+Confirmed Unused.
