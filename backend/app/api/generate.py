@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 from fastapi import APIRouter
 from pydantic import BaseModel
 
@@ -14,7 +14,7 @@ router = APIRouter()
 
 class GenerateRequest(BaseModel):
     template_id: str
-    fields: dict[str, str]
+    fields: dict[str, Any]
     tenant_id: str
     user_id: str | None = None
     operation_type: OperationType = "document_generation"
@@ -25,6 +25,7 @@ def generate(payload: GenerateRequest) -> ResponseEnvelope:
     request = {
         "template_id": payload.template_id,
         "fields": payload.fields,
+        **payload.fields,
     }
     return orchestrator.handle(
         operation_type=payload.operation_type,
