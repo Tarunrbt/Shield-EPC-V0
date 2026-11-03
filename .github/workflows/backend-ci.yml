@@ -10,6 +10,8 @@ jobs:
   backend-tests:
     name: backend-tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Check out repository
