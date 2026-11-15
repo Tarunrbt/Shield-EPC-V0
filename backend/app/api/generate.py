@@ -23,9 +23,9 @@ class GenerateRequest(BaseModel):
 @router.post("/generate", response_model=ResponseEnvelope)
 def generate(payload: GenerateRequest) -> ResponseEnvelope:
     request = {
+        **payload.fields,
         "template_id": payload.template_id,
         "fields": payload.fields,
-        **payload.fields,
     }
     return orchestrator.handle(
         operation_type=payload.operation_type,
