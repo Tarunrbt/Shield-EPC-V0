@@ -174,6 +174,23 @@ def main():
         ],
     )
 
+    # Stage 4 - evaluation
+    print("\n[HERMES] --- Stage 4 - evaluation ---")
+    eval_rc = subprocess.run(
+        ["python3", str(Path(__file__).parent / "evaluator.py")]
+    ).returncode
+    if eval_rc == 2:
+        print(
+            "[HERMES] ::warning:: Stage 4 evaluation FLAGGED. Human review required. "
+            "See audit/learning/evaluation_result.json",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    if eval_rc != 0:
+        print(f"[HERMES] ::error:: Stage 4 evaluator crashed (exit {eval_rc})", file=sys.stderr)
+        sys.exit(eval_rc)
+    print("[HERMES] Stage 4 - evaluation passed.")
+
     clear_state()
     print("\n[HERMES] Pipeline completed successfully.")
     print(f"[HERMES] Outputs: {STAGE1_OUT}, {STAGE2_OUT}, {REPORT_MD}, {REPORT_JSON}")

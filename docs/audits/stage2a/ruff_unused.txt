@@ -1,0 +1,64 @@
+F401 [*] `openai.OpenAI` imported but unused
+  --> ai-agents/pipeline/groq_validate.py:18:20
+   |
+16 | import sys
+17 |
+18 | from openai import OpenAI
+   |                    ^^^^^^
+19 | from openai_client import create_client
+   |
+help: Remove unused import: `openai.OpenAI`
+   |
+17 |
+   - from openai import OpenAI
+18 | from openai_client import create_client
+   |
+
+F401 [*] `app.agents.base.InsufficientInformation` imported but unused
+  --> backend/tests/test_orchestrator.py:14:29
+   |
+12 | import pytest
+13 |
+14 | from app.agents.base import InsufficientInformation
+   |                             ^^^^^^^^^^^^^^^^^^^^^^^
+15 | from app.orchestrator import Orchestrator
+   |
+help: Remove unused import: `app.agents.base.InsufficientInformation`
+   |
+13 |
+   - from app.agents.base import InsufficientInformation
+14 | from app.orchestrator import Orchestrator
+   |
+
+F841 Local variable `result` is assigned to but never used
+  --> backend/tests/test_orchestrator.py:68:5
+   |
+66 |     orchestrator, audit_log, envelope_assembler, _ = _make_orchestrator()
+67 |
+68 |     result = orchestrator.handle(
+   |     ^^^^^^
+69 |         operation_type="nonexistent_type",
+70 |         request={},
+   |
+help: Remove assignment to unused variable `result`
+
+F401 [*] `app.db.database.connection_scope` imported but unused
+  --> backend/tests/test_project_repository.py:14:42
+   |
+12 | import sqlite3
+13 |
+14 | from app.db.database import init_schema, connection_scope
+   |                                          ^^^^^^^^^^^^^^^^
+15 | from app.db.models import Project, Tenant
+16 | from app.db.repositories.project_repository import ProjectRepository
+   |
+help: Remove unused import: `app.db.database.connection_scope`
+   |
+13 |
+   - from app.db.database import init_schema, connection_scope
+14 + from app.db.database import init_schema
+15 | from app.db.models import Project, Tenant
+   |
+
+Found 4 errors.
+[*] 3 fixable with the `--fix` option (1 hidden fix can be enabled with the `--unsafe-fixes` option).

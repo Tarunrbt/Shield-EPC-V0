@@ -1,0 +1,18 @@
+=== Candidate: ai-agents/pipeline/groq_preprocess.py ===
+Current-tree git grep results (filename and module symbol):
+<no matches in current tree>
+
+History filename presence (searching git log --all unique names):
+Found in git history filenames list (exact match on ai-agents/pipeline/groq_preprocess.py or groq_preprocess.py).
+
+VultureFlag: 0 (1=yes,0=no)
+  -- vulture excerpt (if any):
+<no vulture matches for candidate>
+
+RuffFlag: 0 (1=yes,0=no)
+  -- ruff excerpt (if any):
+<no ruff matches for candidate>
+
+Classification: Candidate Unused
+Notes: No current-tree textual references, but file appears in git history.
+

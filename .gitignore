@@ -10,3 +10,8 @@ stage2_validated.json
 Verification_Report.json
 Verification_Report.md
 langchain/
+audit_report.txt
+*.bak-*
+*.before-*
+audit/learning/evaluation_result.json
+audit/learning/run_history.jsonl
