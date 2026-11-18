@@ -3,6 +3,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 _temp_dir = Path(tempfile.mkdtemp(prefix="shield_epc_api_test_"))
 os.environ["AUDIT_LOG_PATH"] = str(_temp_dir / "audit_log.jsonl")
 os.environ["DB_PATH"] = str(_temp_dir / "shield_epc.db")
@@ -71,6 +73,55 @@ def _generate_document(client) -> dict:
 
 def test_generate() -> None:
     _generate_document(client)
+
+
+@pytest.mark.parametrize(
+    "extra_fields",
+    [
+        {"template_id": "ptw_draft"},
+        {"fields": "OVERRIDE_FIELDS"},
+    ],
+)
+def test_generate_preserves_reserved_keys(extra_fields: dict) -> None:
+    response = client.post("/generate", json={
+        "template_id": "jsa_draft",
+        "fields": {
+            "task_description": "Original task",
+            "location": "Zone 4",
+            "performed_by": "Test User",
+            "date": "2026-07-14",
+            **extra_fields,
+        },
+        "tenant_id": "tenant_test_001",
+    })
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "JOB SAFETY ANALYSIS (DRAFT)" in body["content"]["answer"]
+    assert "Task: Original task" in body["content"]["answer"]
+
+
+@pytest.mark.parametrize(
+    "invalid_fields",
+    [
+        {"fields": {"task_description": "Overridden task"}},
+        {"fields": None},
+    ],
+)
+def test_generate_rejects_non_string_document_fields(invalid_fields: dict) -> None:
+    response = client.post("/generate", json={
+        "template_id": "jsa_draft",
+        "fields": {
+            "task_description": "Original task",
+            "location": "Zone 4",
+            "performed_by": "Test User",
+            "date": "2026-07-14",
+            **invalid_fields,
+        },
+        "tenant_id": "tenant_test_001",
+    })
+
+    assert response.status_code == 422
 
 
 def test_audit_log_entry(envelope: dict) -> None:
